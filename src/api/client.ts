@@ -23,9 +23,21 @@ import {
 // backend's .env already has. Not real per-admin auth (one shared secret,
 // no identity) -- that's a separate, later piece of work. Set via
 // VITE_API_TOKEN in .env.local.
+//
+// SECURITY NOTE: Vite inlines both of these into the built JS bundle at
+// build time -- anyone who can load the deployed page can read them out of
+// the JS and call the backend directly. Acceptable only until real
+// per-admin auth (Google OAuth) replaces this shared-token model.
 const API_TOKEN = import.meta.env.VITE_API_TOKEN as string | undefined;
 
-async function fetchJSON<T>(schema: z.ZodType<T>, url: string, init?: RequestInit): Promise<T> {
+// Real backend URL for a standalone-deployed frontend (no dev proxy to fall
+// back on). Empty by default -- same-origin relative paths, which is what
+// the local dev proxy (vite.config.ts) and a same-origin production
+// deployment both want.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+
+async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
+  const url = `${API_BASE_URL}${path}`;
   const res = await fetch(url, {
     ...init,
     headers: {

@@ -12,7 +12,7 @@ const IST = "Asia/Kolkata";
 export function formatIST(iso: string | null | undefined, fmt = "dd MMM yyyy, hh:mm a") {
   if (!iso) return "—";
   try {
-    return formatInTimeZone(parseISO(iso), IST, fmt) + " IST";
+    return formatInTimeZone(parseISO(iso), IST, fmt);
   } catch {
     return iso;
   }

@@ -7,6 +7,7 @@ export const FlowSchema = z.enum([
   "scheduled_credentials",
   "data_transfer",
   "toggle_change",
+  "ad_m365_disable",
 ]);
 export type Flow = z.infer<typeof FlowSchema>;
 
@@ -83,6 +84,8 @@ export const ToggleNameSchema = z.enum([
   "akamai_enabled",
   "gws_account_suspend_enabled",
   "data_transfer_enabled",
+  "ad_disable_enabled",
+  "m365_disable_enabled",
 ]);
 export type ToggleName = z.infer<typeof ToggleNameSchema>;
 
@@ -139,12 +142,22 @@ export const ScheduledJobsResponseSchema = z.object({
 });
 
 // ── Employee Progress ─────────────────────────────────────────────────────────
+// "manual_task" covers real Jira subtasks this automation never touches
+// (Admin Support, Laptop Handover, LMS Training, ...) -- surfaced with their
+// real Jira status instead of an audit outcome. Not added to FlowSchema
+// itself since that's only ever a real write_audit() flow elsewhere
+// (tickets/KPIs/anomalies/audit-log).
+export const StepFlowSchema = FlowSchema.or(z.literal("manual_task"));
+
 export const FlowStepSchema = z.object({
-  flow: FlowSchema,
+  flow: StepFlowSchema,
   issueKey: z.string().nullable(),
   outcome: z.string().nullable(),
   completedAt: z.string().nullable(),
   status: z.enum(["done", "in_progress", "pending", "failed", "skipped"]),
+  // Only present for manual_task steps -- the real Jira subtask summary
+  // (e.g. "Admin Support"), since there's no FLOW_META label for those.
+  label: z.string().nullable().optional(),
 });
 export type FlowStep = z.infer<typeof FlowStepSchema>;
 

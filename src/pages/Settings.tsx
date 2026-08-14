@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardDrive } from "lucide-react";
+import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardDrive, UserX, Laptop } from "lucide-react";
 import { PageSpinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { getToggles, updateToggle } from "@/api";
@@ -22,6 +22,10 @@ const DESCRIPTIONS: Record<ToggleName, string> = {
     "Suspending a departing employee's Google Workspace account.",
   data_transfer_enabled:
     "Transferring a departing employee's Drive files to their manager.",
+  ad_disable_enabled:
+    "Disabling a departing employee's on-premise Active Directory account.",
+  m365_disable_enabled:
+    "Disabling a departing employee's Microsoft 365/Entra ID account and emailing their manager.",
 };
 
 const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
@@ -32,6 +36,8 @@ const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
   akamai_enabled:               Shield,
   gws_account_suspend_enabled:  UserMinus,
   data_transfer_enabled:        HardDrive,
+  ad_disable_enabled:           UserX,
+  m365_disable_enabled:         Laptop,
 };
 
 const TOGGLE_ACCENT: Record<ToggleName, string> = {
@@ -42,6 +48,8 @@ const TOGGLE_ACCENT: Record<ToggleName, string> = {
   akamai_enabled:               "#0891b2",
   gws_account_suspend_enabled:  "#dc2626",
   data_transfer_enabled:        "#ea580c",
+  ad_disable_enabled:           "#b91c1c",
+  m365_disable_enabled:         "#4338ca",
 };
 
 const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
@@ -63,7 +71,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
   {
     title:    "Offboarding",
     subtitle: "Controls for departing employee offboarding flows",
-    names:    ["gws_account_suspend_enabled", "data_transfer_enabled"],
+    names:    ["gws_account_suspend_enabled", "data_transfer_enabled", "ad_disable_enabled", "m365_disable_enabled"],
   },
 ];
 

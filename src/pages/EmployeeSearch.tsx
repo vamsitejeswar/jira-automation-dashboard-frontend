@@ -16,18 +16,12 @@ import {
   HardDrive,
   Key,
   Database,
+  UserX,
+  ClipboardList,
 } from "lucide-react";
 import { getEmployeeProgress } from "@/api";
 import type { EmployeeProgress, FlowStep } from "@/api";
 import { formatIST } from "@/lib/utils";
-
-const SUGGESTIONS = [
-  "rahul.sharma@verse.in",
-  "ananya.krishna@verse.in",
-  "rohan.joshi@verse.in",
-  "kavya.menon@verse.in",
-  "nikhil.verma@verse.in",
-];
 
 const STEP_CONFIG = {
   done:        { icon: CheckCircle2, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", label: "Done" },
@@ -43,6 +37,8 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
   drive_transfer:        { label: "Google Drive Transfer",     icon: HardDrive,  color: "#d97706" },
   scheduled_credentials: { label: "Send Login Credentials",   icon: Key,        color: "#16a34a" },
   data_transfer:         { label: "Data Transfer",            icon: Database,    color: "#0891b2" },
+  ad_m365_disable:       { label: "AD / M365 Disable",         icon: UserX,       color: "#b91c1c" },
+  manual_task:           { label: "Manual Task",               icon: ClipboardList, color: "#64748b" },
 };
 
 const STATUS_CONFIG = {
@@ -76,7 +72,7 @@ function StepRow({ step }: { step: FlowStep }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-sm font-semibold text-slate-800">
-            {flow?.label ?? step.flow}
+            {step.label ?? flow?.label ?? step.flow}
           </span>
           <div className="flex items-center gap-1.5">
             {step.outcome && (
@@ -297,20 +293,6 @@ export function EmployeeSearch() {
           >
             Search
           </button>
-        </div>
-
-        {/* Quick picks */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Quick:</span>
-          {SUGGESTIONS.map(s => (
-            <button
-              key={s}
-              onClick={() => submit(s)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              {s}
-            </button>
-          ))}
         </div>
       </div>
 

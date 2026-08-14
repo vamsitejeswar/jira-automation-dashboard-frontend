@@ -7,6 +7,7 @@ import {
   AnomalySummarySchema,
   ScheduledJobsResponseSchema,
   AuditLogResponseSchema,
+  EmployeeSearchResponseSchema,
   type TicketsResponse,
   type TicketDetail,
   type Kpis,
@@ -14,12 +15,24 @@ import {
   type AnomalySummary,
   type ScheduledJob,
   type AuditLogResponse,
+  type EmployeeSearchResponse,
 } from "./types";
+
+// Shared-secret token the backend's /api/admin/* routes require as
+// "Authorization: Bearer <token>" -- same INTERNAL_TASK_TOKEN the FastAPI
+// backend's .env already has. Not real per-admin auth (one shared secret,
+// no identity) -- that's a separate, later piece of work. Set via
+// VITE_API_TOKEN in .env.local.
+const API_TOKEN = import.meta.env.VITE_API_TOKEN as string | undefined;
 
 async function fetchJSON<T>(schema: z.ZodType<T>, url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
+      ...init?.headers,
+    },
     credentials: "include",
   });
   if (!res.ok) {
@@ -89,6 +102,11 @@ export function getAnomalies(filters: AnomalyFilters = {}): Promise<AnomalySumma
 
 export function getScheduledJobs(): Promise<{ jobs: ScheduledJob[] }> {
   return fetchJSON(ScheduledJobsResponseSchema, `/api/admin/scheduled-jobs`);
+}
+
+export function getEmployeeProgress(email: string): Promise<EmployeeSearchResponse> {
+  const params = new URLSearchParams({ email });
+  return fetchJSON(EmployeeSearchResponseSchema, `/api/admin/employees?${params}`);
 }
 
 export interface AuditLogFilters {

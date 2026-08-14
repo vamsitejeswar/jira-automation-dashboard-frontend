@@ -111,9 +111,9 @@ export function Tickets() {
   const currentPage = filters.page ?? 1;
 
   return (
-    <div className="p-6 space-y-5 animate-fade-in">
+    <div className="min-h-full bg-slate-50 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="border-b bg-white px-6 py-5 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tickets</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -132,6 +132,7 @@ export function Tickets() {
         </Button>
       </div>
 
+      <div className="p-6 space-y-5">
       {/* Filters bar */}
       <div className="flex flex-wrap gap-2 items-center rounded-xl border bg-card px-4 py-3 shadow-card">
         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -264,6 +265,7 @@ export function Tickets() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

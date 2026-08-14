@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle,
+  Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/ui/preset-picker";
-import { getKpis, getAnomalies, getScheduledJobs } from "@/api";
-import { formatISTShort } from "@/lib/utils";
+import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob } from "@/api";
+import { formatISTShort, describeCron } from "@/lib/utils";
 
 type Preset = "today" | "7d" | "30d";
 const PRESET_LABELS: Record<Preset, string> = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days" };
@@ -135,6 +136,12 @@ export function Overview() {
   const anomalies = useQuery({ queryKey: ["anomalies", "overview", dates], queryFn: () => getAnomalies(dates) });
   const jobs     = useQuery({ queryKey: ["scheduled-jobs"], queryFn: getScheduledJobs });
 
+  const qc = useQueryClient();
+  const forceRun = useMutation({
+    mutationFn: (name: string) => runScheduledJob(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled-jobs"] }),
+  });
+
   return (
     <div className="min-h-full bg-slate-50">
       {/* Header — always visible */}
@@ -200,6 +207,8 @@ export function Overview() {
                     </div>
                   ))}
                 </div>
+              ) : anomalies.isError ? (
+                <div className="px-5 py-3"><ErrorState error={anomalies.error as Error} onRetry={anomalies.refetch} /></div>
               ) : anomalies.data!.anomalies.length === 0 ? (
                 <Empty message="No anomalies in this period" className="py-8" />
               ) : (
@@ -239,23 +248,44 @@ export function Overview() {
                     </div>
                   ))}
                 </div>
+              ) : jobs.isError ? (
+                <div className="px-5 py-3"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
               ) : jobs.data!.jobs.length === 0 ? (
                 <Empty message="No scheduled jobs found" className="py-8" />
               ) : (
                 <ul className="divide-y divide-slate-100">
-                  {[...jobs.data!.jobs].sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime()).map((job) => (
-                    <li key={job.name} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                  {[...jobs.data!.jobs].sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime()).map((job) => {
+                    const isRunningThis = forceRun.isPending && forceRun.variables === job.name;
+                    return (
+                    <li key={job.name} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/70 transition-colors">
                       <JobDot state={job.state} />
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-xs font-semibold text-slate-800">{job.name}</p>
-                        <p className="font-mono text-[10px] text-slate-400 mt-0.5">{job.endpoint} · {job.schedule}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="truncate text-sm font-semibold text-slate-800">{job.label}</p>
+                          <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500" title="Cloud Scheduler job name">
+                            {job.name}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-slate-400">{describeCron(job.schedule, job.timeZone)}</p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-xs font-semibold text-slate-800">{formatISTShort(job.nextRunAt)}</p>
-                        <p className="text-[10px] text-slate-400">next run</p>
+                        <p className="text-xs font-semibold text-slate-700 tabular-nums">{formatISTShort(job.nextRunAt)}</p>
+                        <p className="text-[11px] text-slate-400">next run</p>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs font-medium shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                        disabled={forceRun.isPending}
+                        onClick={() => forceRun.mutate(job.name)}
+                        title="Force run now, without waiting for the schedule"
+                      >
+                        {isRunningThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                        Force run
+                      </Button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>

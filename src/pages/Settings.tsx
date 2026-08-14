@@ -9,6 +9,18 @@ import { getToggles, updateToggle } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { Toggle, ToggleName } from "@/api";
 
+const TOGGLE_LABELS: Record<ToggleName, string> = {
+  automation_enabled:           "Automation",
+  email_sending_enabled:        "Email Sending",
+  gws_account_creation_enabled: "Google Woskspace Account Creation",
+  retry_on_update_enabled:      "Retry On Update",
+  akamai_enabled:               "Akamai",
+  gws_account_suspend_enabled:  "Google Workspace Account Suspend",
+  data_transfer_enabled:        "Data Transfer",
+  ad_disable_enabled:           "Active Directory Disable",
+  m365_disable_enabled:         "M365 Disable",
+};
+
 const DESCRIPTIONS: Record<ToggleName, string> = {
   automation_enabled:
     "Master switch for the entire automation: new tickets, scheduled emails, and Drive transfers.",
@@ -61,7 +73,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    ["automation_enabled", "email_sending_enabled"],
   },
   {
-    title:    "Onboarding",
+    title:    "On-Boarding",
     subtitle: "Controls for new employee onboarding flows",
     names:    ["gws_account_creation_enabled", "retry_on_update_enabled"],
   },
@@ -71,7 +83,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    ["akamai_enabled"],
   },
   {
-    title:    "Offboarding",
+    title:    "Off-Boarding",
     subtitle: "Controls for departing employee offboarding flows",
     names:    ["gws_account_suspend_enabled", "data_transfer_enabled", "ad_disable_enabled", "m365_disable_enabled"],
   },
@@ -116,8 +128,8 @@ function ToggleRow({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-slate-800 capitalize">
-            {toggle.name.replace(/_/g, " ")}
+          <span className="text-sm font-semibold text-slate-800">
+            {TOGGLE_LABELS[toggle.name] ?? toggle.name}
           </span>
           {isMaster && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">

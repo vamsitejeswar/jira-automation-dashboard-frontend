@@ -40,31 +40,69 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+type AuditItem = { event: AuditEvent; isAnomaly: boolean };
 type TimelineItem =
-  | { kind: "comment"; author: string; body: string; createdAt: string }
+  | { kind: "comment"; author: string; body: string; createdAt: string; related: AuditItem[] }
   | { kind: "audit"; event: AuditEvent; isAnomaly: boolean };
+
+// A comment and the audit event it caused are logged by two different
+// systems (Jira's own comment timestamp vs. this app's write_audit call) a
+// moment apart, never at the exact same instant -- "close enough" is
+// whichever unclaimed event is nearest in time, within this window.
+const RELATED_EVENT_WINDOW_MS = 30_000;
 
 function buildTimeline(
   comments: { author: string; body: string; createdAt: string }[],
   auditEvents: AuditEvent[],
   anomalyKeys: Set<string>
 ): TimelineItem[] {
-  const auditItems = auditEvents
-    .map((e) => ({
-      kind: "audit" as const,
-      event: e,
-      isAnomaly: anomalyKeys.has(`${e.flow}:${e.outcome}`),
-    }))
+  const auditItems: AuditItem[] = auditEvents
+    .map((e) => ({ event: e, isAnomaly: anomalyKeys.has(`${e.flow}:${e.outcome}`) }))
     // Plain INFO events just restate what the automation's own comment
     // (always posted alongside) already says in plain English -- only
-    // worth a separate timeline row when they carry signal a comment
-    // doesn't: an anomaly, or a real WARNING/ERROR severity.
+    // worth surfacing when they carry signal a comment doesn't: an
+    // anomaly, or a real WARNING/ERROR severity.
     .filter((a) => a.isAnomaly || a.event.severity !== "INFO");
 
-  const items: TimelineItem[] = [
-    ...comments.map((c) => ({ kind: "comment" as const, ...c })),
-    ...auditItems,
-  ];
+  // Pair each audit event with whichever comment is closest in time overall,
+  // not just whichever comment happens to be processed first. Two distinct
+  // actions logged moments apart (e.g. "suspended" then a separate "no
+  // manager set" check) both land within 30s of the FIRST comment too --
+  // scanning comments in order and grabbing every unclaimed event in range
+  // let the earlier comment steal the later action's event. Sorting all
+  // candidate pairs by time delta first, then claiming smallest-delta-first,
+  // ensures each event goes to the comment it's actually closest to.
+  const candidates: { commentIdx: number; auditIdx: number; delta: number }[] = [];
+  comments.forEach((c, ci) => {
+    const cTime = new Date(c.createdAt).getTime();
+    auditItems.forEach((a, ai) => {
+      const delta = Math.abs(new Date(a.event.timestamp).getTime() - cTime);
+      if (delta <= RELATED_EVENT_WINDOW_MS) candidates.push({ commentIdx: ci, auditIdx: ai, delta });
+    });
+  });
+  candidates.sort((x, y) => x.delta - y.delta);
+
+  const relatedByComment: AuditItem[][] = comments.map(() => []);
+  const claimed = new Set<number>();
+  for (const { commentIdx, auditIdx } of candidates) {
+    if (claimed.has(auditIdx)) continue;
+    claimed.add(auditIdx);
+    relatedByComment[commentIdx].push(auditItems[auditIdx]);
+  }
+
+  const commentItems: TimelineItem[] = comments.map((c, ci) => ({
+    kind: "comment" as const,
+    ...c,
+    related: relatedByComment[ci].sort(
+      (a, b) => new Date(a.event.timestamp).getTime() - new Date(b.event.timestamp).getTime()
+    ),
+  }));
+
+  const orphanAuditItems: TimelineItem[] = auditItems
+    .filter((_, idx) => !claimed.has(idx))
+    .map((a) => ({ kind: "audit" as const, ...a }));
+
+  const items: TimelineItem[] = [...commentItems, ...orphanAuditItems];
   return items.sort((a, b) => {
     const ta = a.kind === "comment" ? a.createdAt : a.event.timestamp;
     const tb = b.kind === "comment" ? b.createdAt : b.event.timestamp;
@@ -264,6 +302,27 @@ export function TicketDetail() {
                       <div className="mt-2.5 rounded-lg bg-slate-50 px-4 py-3">
                         <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{item.body}</p>
                       </div>
+                      {/* Audit events tied to this specific comment -- shown
+                          attached to it, not as a separate floating row, so
+                          it's unambiguous which comment they explain. */}
+                      {item.related.length > 0 && (
+                        <div className="mt-2 space-y-1.5 border-l-2 border-slate-200 pl-3">
+                          {item.related.map((a, ri) => (
+                            <div key={ri} className="flex flex-wrap items-center gap-1.5">
+                              <SeverityBadge severity={a.event.severity} />
+                              <OutcomeBadge outcome={a.event.outcome} />
+                              {a.isAnomaly && (
+                                <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                                  <AlertTriangle className="h-3 w-3" /> Anomaly
+                                </span>
+                              )}
+                              {a.event.error && (
+                                <span className="font-mono text-xs text-red-600">{a.event.error}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

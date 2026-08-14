@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getEmployeeProgress } from "@/api";
 import type { EmployeeProgress, FlowStep } from "@/api";
-import { formatIST } from "@/lib/utils";
+import { formatIST, titleCase } from "@/lib/utils";
 
 const STEP_CONFIG = {
   done:        { icon: CheckCircle2, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", label: "Done" },
@@ -80,7 +80,7 @@ function StepRow({ step }: { step: FlowStep }) {
           <div className="flex items-center gap-1.5">
             {step.outcome && (
               <span className="font-mono text-[11px] bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-600">
-                {step.outcome.replace(/_/g, " ")}
+                {titleCase(step.outcome)}
               </span>
             )}
             <span
@@ -169,7 +169,7 @@ function ProgressRing({ steps }: { steps: FlowStep[] }) {
   );
 }
 
-function RecordCard({ record }: { record: EmployeeProgress }) {
+function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail: boolean }) {
   const statusCfg = STATUS_CONFIG[record.overallStatus];
   const isOnboarding = record.type === "onboarding";
 
@@ -210,11 +210,11 @@ function RecordCard({ record }: { record: EmployeeProgress }) {
                 {statusCfg.label}
               </span>
             </div>
-            {record.startedAt && (
-              <p className="text-xs text-slate-500 mt-0.5">
-                Started {formatIST(record.startedAt)}
-              </p>
-            )}
+            <p className="text-xs text-slate-500 mt-0.5">
+              {showEmail && <span className="font-medium text-slate-600">{record.email}</span>}
+              {showEmail && record.startedAt && " — "}
+              {record.startedAt && `Started ${formatIST(record.startedAt)}`}
+            </p>
           </div>
         </div>
 
@@ -246,23 +246,27 @@ function RecordCard({ record }: { record: EmployeeProgress }) {
 
 export function EmployeeSearch() {
   const [inputVal, setInputVal] = useState("");
-  const [submittedEmail, setSubmittedEmail] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["employee", submittedEmail],
-    queryFn: () => getEmployeeProgress(submittedEmail),
-    enabled: submittedEmail.length > 3,
+    queryKey: ["employee", submittedQuery],
+    queryFn: () => getEmployeeProgress(submittedQuery),
+    enabled: submittedQuery.length > 2,
   });
 
-  function submit(email: string) {
-    const e = email.toLowerCase().trim();
-    setInputVal(e);
-    setSubmittedEmail(e);
+  function submit(query: string) {
+    const q = query.trim();
+    setInputVal(q);
+    setSubmittedQuery(q);
   }
 
   const hasResults = data && data.records.length > 0;
   const onboarding = data?.records.filter(r => r.type === "onboarding") ?? [];
   const offboarding = data?.records.filter(r => r.type === "offboarding") ?? [];
+  // Only worth labeling each card with its employee email when the search
+  // matched more than one -- a single match already names them in the
+  // identity bar above, so repeating it on every card would just be noise.
+  const showEmailPerCard = (data?.resolvedEmails.length ?? 0) > 1;
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -282,8 +286,8 @@ export function EmployeeSearch() {
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
-              type="email"
-              placeholder="employee@verse.in"
+              type="text"
+              placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
               className="w-full h-11 pl-10 text-sm"
               value={inputVal}
               onChange={e => setInputVal(e.target.value)}
@@ -330,13 +334,13 @@ export function EmployeeSearch() {
         )}
 
         {/* No search yet */}
-        {!submittedEmail && !isLoading && (
+        {!submittedQuery && !isLoading && (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 mb-4">
               <Search className="h-7 w-7 text-slate-400" />
             </div>
             <p className="text-base font-semibold text-slate-700">Search for an employee</p>
-            <p className="mt-1 text-sm text-slate-400">Enter an email address above to see their automation status.</p>
+            <p className="mt-1 text-sm text-slate-400">Enter an email, ticket ID, or name above to see their automation status.</p>
           </div>
         )}
 
@@ -349,11 +353,16 @@ export function EmployeeSearch() {
                 <UserCircle2 className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 text-base truncate">{data.email}</p>
+                <p className="font-bold text-slate-900 text-base truncate">
+                  {data.resolvedEmails.length === 1 ? data.resolvedEmails[0] : data.query}
+                </p>
                 <p className="text-sm text-slate-500">
-                  {data.records.length === 0
+                  {data.resolvedEmails.length === 0
+                    ? `No employee matched "${data.query}"`
+                    : data.records.length === 0
                     ? "No automation records found"
-                    : `${data.records.length} record${data.records.length !== 1 ? "s" : ""} — ${onboarding.length} onboarding, ${offboarding.length} offboarding`}
+                    : `${data.records.length} record${data.records.length !== 1 ? "s" : ""} — ${onboarding.length} onboarding, ${offboarding.length} offboarding` +
+                      (data.resolvedEmails.length > 1 ? ` across ${data.resolvedEmails.length} employees` : "")}
                 </p>
               </div>
               {data.records.length > 0 && (
@@ -374,15 +383,64 @@ export function EmployeeSearch() {
               )}
             </div>
 
+            {/* Search results -- the real Jira tickets that matched, before
+                any of it is grouped into employee progress below. Skipped
+                for a plain-email search (no Jira call was even made, so
+                there's nothing ticket-shaped to list). */}
+            {data.searchResults.some(r => r.issueKey) && (
+              <div className="mb-6 rounded-xl border bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b bg-slate-50/60">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Search results ({data.searchResults.length})
+                  </h2>
+                </div>
+                <ul className="divide-y divide-slate-100">
+                  {data.searchResults.map((r, i) => (
+                    <li key={i} className="flex items-center gap-3 px-5 py-3">
+                      {r.issueKey ? (
+                        <Link
+                          to={`/tickets/${r.issueKey}`}
+                          className="shrink-0 font-mono text-xs font-bold text-blue-600 hover:underline"
+                        >
+                          {r.issueKey}
+                        </Link>
+                      ) : (
+                        <span className="shrink-0 font-mono text-xs text-slate-400">—</span>
+                      )}
+                      <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{r.title ?? "—"}</span>
+                      <span className="shrink-0 text-xs text-slate-500">{r.employeeEmail ?? "No employee resolved"}</span>
+                      {r.jiraUrl && (
+                        <a
+                          href={r.jiraUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-slate-400 hover:text-blue-600"
+                          title="Open in Jira"
+                        >
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Not found */}
             {data.records.length === 0 && (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-white py-20">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 mb-4">
                   <UserCircle2 className="h-7 w-7 text-slate-400" />
                 </div>
-                <p className="text-base font-semibold text-slate-700">No records for this employee</p>
+                <p className="text-base font-semibold text-slate-700">
+                  {data.resolvedEmails.length === 0 ? "No matching employee" : "No records for this employee"}
+                </p>
                 <p className="mt-1 text-sm text-slate-400 max-w-sm text-center">
-                  There are no Jira tickets linked to <strong>{data.email}</strong> yet.
+                  {data.resolvedEmails.length === 0 ? (
+                    <>No employee, ticket, or title matched <strong>{data.query}</strong>.</>
+                  ) : (
+                    <>There are no Jira tickets linked to <strong>{data.resolvedEmails.join(", ")}</strong> yet.</>
+                  )}
                 </p>
               </div>
             )}
@@ -399,7 +457,7 @@ export function EmployeeSearch() {
                         Onboarding
                       </h2>
                     </div>
-                    {onboarding.map((r, i) => <RecordCard key={i} record={r} />)}
+                    {onboarding.map((r, i) => <RecordCard key={i} record={r} showEmail={showEmailPerCard} />)}
                   </div>
                 )}
 
@@ -412,7 +470,7 @@ export function EmployeeSearch() {
                         Offboarding
                       </h2>
                     </div>
-                    {offboarding.map((r, i) => <RecordCard key={i} record={r} />)}
+                    {offboarding.map((r, i) => <RecordCard key={i} record={r} showEmail={showEmailPerCard} />)}
                   </div>
                 )}
               </div>

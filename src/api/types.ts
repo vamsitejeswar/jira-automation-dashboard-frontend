@@ -138,6 +138,7 @@ export type AnomalySummary = z.infer<typeof AnomalySummarySchema>;
 // ── Scheduled Jobs ─────────────────────────────────────────────────────────────
 export const ScheduledJobSchema = z.object({
   name: z.string(),
+  label: z.string(),
   endpoint: z.string(),
   schedule: z.string(),
   timeZone: z.string(),
@@ -182,8 +183,25 @@ export const EmployeeProgressSchema = z.object({
 });
 export type EmployeeProgress = z.infer<typeof EmployeeProgressSchema>;
 
+// One real Jira ticket that matched the search box's query -- issueKey/title
+// are null only for the plain-email fast path (no Jira call at all was
+// made). employeeEmail is null if this ticket exists but no employee email
+// could be resolved from it (still worth showing as a hit).
+export const EmployeeSearchResultSchema = z.object({
+  issueKey: z.string().nullable(),
+  title: z.string().nullable(),
+  employeeEmail: z.string().nullable(),
+  jiraUrl: z.string().nullable(),
+});
+export type EmployeeSearchResult = z.infer<typeof EmployeeSearchResultSchema>;
+
 export const EmployeeSearchResponseSchema = z.object({
-  email: z.string(),
+  query: z.string(),
+  searchResults: z.array(EmployeeSearchResultSchema),
+  // The search box accepts an email, a ticket ID, or a name/title fragment --
+  // an ambiguous fragment can resolve to more than one real employee, each
+  // one's records tagged via EmployeeProgress.email.
+  resolvedEmails: z.array(z.string()),
   records: z.array(EmployeeProgressSchema),
 });
 export type EmployeeSearchResponse = z.infer<typeof EmployeeSearchResponseSchema>;

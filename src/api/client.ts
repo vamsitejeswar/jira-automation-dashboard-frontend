@@ -5,6 +5,7 @@ import {
   KpisSchema,
   TogglesResponseSchema,
   AnomalySummarySchema,
+  ScheduledJobSchema,
   ScheduledJobsResponseSchema,
   AuditLogResponseSchema,
   EmployeeSearchResponseSchema,
@@ -116,8 +117,14 @@ export function getScheduledJobs(): Promise<{ jobs: ScheduledJob[] }> {
   return fetchJSON(ScheduledJobsResponseSchema, `/api/admin/scheduled-jobs`);
 }
 
-export function getEmployeeProgress(email: string): Promise<EmployeeSearchResponse> {
-  const params = new URLSearchParams({ email });
+export function runScheduledJob(name: string): Promise<{ job: ScheduledJob }> {
+  return fetchJSON(z.object({ job: ScheduledJobSchema }), `/api/admin/scheduled-jobs/${encodeURIComponent(name)}/run`, {
+    method: "POST",
+  });
+}
+
+export function getEmployeeProgress(query: string): Promise<EmployeeSearchResponse> {
+  const params = new URLSearchParams({ q: query });
   return fetchJSON(EmployeeSearchResponseSchema, `/api/admin/employees?${params}`);
 }
 

@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Search, Download, Filter } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -82,7 +82,7 @@ const columns = [
   col.accessor("employeeEmail", {
     header: "Employee",
     cell: (info) => (
-      <span className="text-xs text-slate-500">{info.getValue() ?? "—"}</span>
+      <span className="text-xs text-slate-600">{info.getValue() ?? "—"}</span>
     ),
   }),
   col.accessor("updatedAt", {
@@ -148,12 +148,11 @@ export function Tickets() {
 
         {/* Filters */}
         <div className="mt-5 flex flex-wrap gap-2 items-center">
-          <Filter className="h-4 w-4 text-slate-400 shrink-0" />
-          <div className="relative flex-1 min-w-44">
+                    <div className="relative flex-1 min-w-44">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <Input
               placeholder="Issue key or email..."
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-9 text-xs"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applySearch()}

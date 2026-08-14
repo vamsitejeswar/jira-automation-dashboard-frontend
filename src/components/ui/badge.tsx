@@ -1,5 +1,5 @@
 import { type VariantProps, cva } from "class-variance-authority";
-import { cn } from "@/lib/utils";
+import { cn, titleCase } from "@/lib/utils";
 
 const badgeVariants = cva(
   "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors",
@@ -75,7 +75,7 @@ export function isSelfEvidentError(outcome: string): boolean {
 
 export function OutcomeBadge({ outcome }: { outcome: string }) {
   const variant = OUTCOME_MAP[outcome] ?? "info";
-  return <Badge variant={variant}>{outcome.replace(/_/g, " ")}</Badge>;
+  return <Badge variant={variant}>{titleCase(outcome)}</Badge>;
 }
 
 export function SeverityBadge({ severity }: { severity: string }) {

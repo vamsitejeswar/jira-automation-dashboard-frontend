@@ -49,13 +49,21 @@ function buildTimeline(
   auditEvents: AuditEvent[],
   anomalyKeys: Set<string>
 ): TimelineItem[] {
-  const items: TimelineItem[] = [
-    ...comments.map((c) => ({ kind: "comment" as const, ...c })),
-    ...auditEvents.map((e) => ({
+  const auditItems = auditEvents
+    .map((e) => ({
       kind: "audit" as const,
       event: e,
       isAnomaly: anomalyKeys.has(`${e.flow}:${e.outcome}`),
-    })),
+    }))
+    // Plain INFO events just restate what the automation's own comment
+    // (always posted alongside) already says in plain English -- only
+    // worth a separate timeline row when they carry signal a comment
+    // doesn't: an anomaly, or a real WARNING/ERROR severity.
+    .filter((a) => a.isAnomaly || a.event.severity !== "INFO");
+
+  const items: TimelineItem[] = [
+    ...comments.map((c) => ({ kind: "comment" as const, ...c })),
+    ...auditItems,
   ];
   return items.sort((a, b) => {
     const ta = a.kind === "comment" ? a.createdAt : a.event.timestamp;
@@ -64,9 +72,24 @@ function buildTimeline(
   });
 }
 
+const JIRA_STATUS_STYLE: Record<string, string> = {
+  closed:      "bg-emerald-50 text-emerald-700 border-emerald-200",
+  done:        "bg-emerald-50 text-emerald-700 border-emerald-200",
+  resolved:    "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "in progress": "bg-blue-50 text-blue-700 border-blue-200",
+  wip:         "bg-blue-50 text-blue-700 border-blue-200",
+  open:        "bg-amber-50 text-amber-700 border-amber-200",
+  "waiting for support": "bg-amber-50 text-amber-700 border-amber-200",
+  "waiting for approval": "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+function statusStyle(status: string) {
+  return JIRA_STATUS_STYLE[status.trim().toLowerCase()] ?? "bg-slate-100 text-slate-600 border-slate-200";
+}
+
 function TicketDetailSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-6 max-w-4xl">
+    <div className="px-8 py-6 space-y-6">
       <div className="rounded-xl bg-white shadow-sm p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3 flex-1">
@@ -146,7 +169,7 @@ export function TicketDetail() {
           <ErrorState error={ticket.error as Error} onRetry={ticket.refetch} />
         </div>
       ) : (
-      <div className="px-8 py-6 space-y-6 max-w-4xl">
+      <div className="px-8 py-6 space-y-6">
       {/* Header card */}
       <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
         <div className="h-1.5" style={{ background: FLOW_META[t!.flow]?.color ?? "#64748b" }} />
@@ -162,13 +185,19 @@ export function TicketDetail() {
               })()}
             </div>
             <div className="space-y-2">
-              {t!.title && (
-                <h1 className="text-base font-bold text-slate-900 leading-snug">{t!.title}</h1>
-              )}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {t!.title && (
+                  <h1 className="text-base font-bold text-slate-900 leading-snug">{t!.title}</h1>
+                )}
+                {t!.jiraStatus && (
+                  <span className={`rounded-md border px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${statusStyle(t!.jiraStatus)}`}>
+                    {t!.jiraStatus}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <FlowBadge flow={t!.flow} />
                 <OutcomeBadge outcome={t!.currentStatus} />
-                {t!.jiraStatus && <Badge variant="muted">{t!.jiraStatus}</Badge>}
                 {t!.hasError && <Badge variant="error">Has Error</Badge>}
               </div>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700">

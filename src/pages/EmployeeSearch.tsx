@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search,
@@ -22,9 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getEmployeeProgress } from "@/api";
-import type { EmployeeProgress, FlowStep } from "@/api";
+import { getEmployeeProgress, getEmployeeSearchSuggestions } from "@/api";
+import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
 import { formatIST, titleCase } from "@/lib/utils";
+
+// How long to wait after the user stops typing before firing a live
+// suggestions request -- short enough to feel instant, long enough that a
+// fast typist doesn't fire one request per keystroke.
+const SUGGESTIONS_DEBOUNCE_MS = 250;
 
 const STEP_CONFIG = {
   done:        { icon: CheckCircle2, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", label: "Done" },
@@ -194,8 +199,8 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
           >
             {isOnboarding ? "ON" : "OFF"}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold text-slate-800">
                 {isOnboarding ? "Onboarding" : "Offboarding"}
               </span>
@@ -210,6 +215,11 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
                 {statusCfg.label}
               </span>
             </div>
+            {record.title && (
+              <p className="mt-0.5 truncate text-xs font-medium text-slate-600" title={record.title}>
+                {record.title}
+              </p>
+            )}
             <p className="text-xs text-slate-500 mt-0.5">
               {showEmail && <span className="font-medium text-slate-600">{record.email}</span>}
               {showEmail && record.startedAt && " — "}
@@ -247,6 +257,10 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
 export function EmployeeSearch() {
   const [inputVal, setInputVal] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<EmployeeSearchResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["employee", submittedQuery],
@@ -254,10 +268,38 @@ export function EmployeeSearch() {
     enabled: submittedQuery.length > 2,
   });
 
+  // Live-as-you-type dropdown -- debounced so a fast typist doesn't fire a
+  // request per keystroke; cheap on the backend since it skips the audit
+  // log entirely (see GET /api/admin/employees/suggestions).
+  useEffect(() => {
+    if (inputVal.trim().length <= 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      getEmployeeSearchSuggestions(inputVal.trim())
+        .then(res => setSuggestions(res.results))
+        .catch(() => setSuggestions([]));
+    }, SUGGESTIONS_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [inputVal]);
+
   function submit(query: string) {
     const q = query.trim();
     setInputVal(q);
     setSubmittedQuery(q);
+    setShowSuggestions(false);
+  }
+
+  function pickSuggestion(result: EmployeeSearchResult) {
+    setShowSuggestions(false);
+    if (result.employeeEmail) {
+      submit(result.employeeEmail);
+    } else if (result.issueKey) {
+      // No employee resolved from this ticket -- nothing to look up here,
+      // so go straight to the ticket itself instead.
+      navigate(`/tickets/${result.issueKey}`);
+    }
   }
 
   const hasResults = data && data.records.length > 0;
@@ -290,9 +332,43 @@ export function EmployeeSearch() {
               placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
               className="w-full h-11 pl-10 text-sm"
               value={inputVal}
-              onChange={e => setInputVal(e.target.value)}
+              onChange={e => { setInputVal(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
               onKeyDown={e => e.key === "Enter" && submit(inputVal)}
+              onBlur={() => {
+                // Delayed so a click on a dropdown item registers before
+                // the dropdown unmounts.
+                blurTimeout.current = setTimeout(() => setShowSuggestions(false), 150);
+              }}
             />
+
+            {showSuggestions && suggestions.length > 0 && (
+              <ul
+                className="absolute z-10 mt-1.5 w-full rounded-lg border bg-white shadow-lg overflow-hidden"
+                onMouseDown={e => {
+                  // Fires before the input's onBlur -- cancel the pending
+                  // blur-close so the click below actually lands.
+                  e.preventDefault();
+                  if (blurTimeout.current) clearTimeout(blurTimeout.current);
+                }}
+              >
+                {suggestions.map((s, i) => (
+                  <li
+                    key={i}
+                    onClick={() => pickSuggestion(s)}
+                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 border-b last:border-b-0"
+                  >
+                    {s.issueKey && (
+                      <span className="shrink-0 font-mono text-xs font-bold text-blue-600">{s.issueKey}</span>
+                    )}
+                    <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{s.title ?? s.employeeEmail ?? s.issueKey}</span>
+                    {s.employeeEmail && (
+                      <span className="shrink-0 text-xs text-slate-400">{s.employeeEmail}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <Button onClick={() => submit(inputVal)} className="h-11 px-6">
             Search
@@ -382,49 +458,6 @@ export function EmployeeSearch() {
                 </div>
               )}
             </div>
-
-            {/* Search results -- the real Jira tickets that matched, before
-                any of it is grouped into employee progress below. Skipped
-                for a plain-email search (no Jira call was even made, so
-                there's nothing ticket-shaped to list). */}
-            {data.searchResults.some(r => r.issueKey) && (
-              <div className="mb-6 rounded-xl border bg-white shadow-sm overflow-hidden">
-                <div className="px-5 py-3 border-b bg-slate-50/60">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Search results ({data.searchResults.length})
-                  </h2>
-                </div>
-                <ul className="divide-y divide-slate-100">
-                  {data.searchResults.map((r, i) => (
-                    <li key={i} className="flex items-center gap-3 px-5 py-3">
-                      {r.issueKey ? (
-                        <Link
-                          to={`/tickets/${r.issueKey}`}
-                          className="shrink-0 font-mono text-xs font-bold text-blue-600 hover:underline"
-                        >
-                          {r.issueKey}
-                        </Link>
-                      ) : (
-                        <span className="shrink-0 font-mono text-xs text-slate-400">—</span>
-                      )}
-                      <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{r.title ?? "—"}</span>
-                      <span className="shrink-0 text-xs text-slate-500">{r.employeeEmail ?? "No employee resolved"}</span>
-                      {r.jiraUrl && (
-                        <a
-                          href={r.jiraUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 text-slate-400 hover:text-blue-600"
-                          title="Open in Jira"
-                        >
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {/* Not found */}
             {data.records.length === 0 && (

@@ -177,6 +177,9 @@ export const EmployeeProgressSchema = z.object({
   type: z.enum(["onboarding", "offboarding"]),
   jiraUrl: z.string().nullable(),
   issueKey: z.string().nullable(),
+  // The real parent ticket's title (e.g. "Employee Onboarding | V3057 |
+  // Jane Doe") -- null only if it couldn't be resolved from Jira.
+  title: z.string().nullable(),
   startedAt: z.string().nullable(),
   steps: z.array(FlowStepSchema),
   overallStatus: z.enum(["completed", "in_progress", "failed", "pending"]),
@@ -194,6 +197,12 @@ export const EmployeeSearchResultSchema = z.object({
   jiraUrl: z.string().nullable(),
 });
 export type EmployeeSearchResult = z.infer<typeof EmployeeSearchResultSchema>;
+
+export const EmployeeSearchSuggestionsSchema = z.object({
+  query: z.string(),
+  results: z.array(EmployeeSearchResultSchema),
+});
+export type EmployeeSearchSuggestions = z.infer<typeof EmployeeSearchSuggestionsSchema>;
 
 export const EmployeeSearchResponseSchema = z.object({
   query: z.string(),

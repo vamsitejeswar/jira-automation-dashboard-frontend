@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, AlertTriangle, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageSpinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Badge, OutcomeBadge, SeverityBadge, FlowBadge } from "@/components/ui/badge";
 import { getTicketDetail, getAnomalies } from "@/api";
@@ -33,6 +33,46 @@ function buildTimeline(
   });
 }
 
+function TicketDetailSkeleton() {
+  return (
+    <div className="px-8 py-6 space-y-6 max-w-4xl">
+      <div className="rounded-xl border bg-white shadow-sm p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <Skeleton className="h-4 w-44" />
+              <Skeleton className="h-4 w-44" />
+              <Skeleton className="h-4 w-36" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-24 flex-shrink-0" />
+        </div>
+      </div>
+      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b bg-slate-50">
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="relative ml-6 border-l border-slate-200">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="ml-6 py-4 pr-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-3 w-24 ml-auto" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TicketDetail() {
   const { issueKey } = useParams<{ issueKey: string }>();
 
@@ -47,58 +87,64 @@ export function TicketDetail() {
     queryFn: () => getAnomalies({ days: 30 }),
   });
 
-  if (ticket.isLoading) return <PageSpinner />;
-  if (ticket.isError) return <ErrorState error={ticket.error as Error} onRetry={ticket.refetch} />;
-
-  const t = ticket.data!;
+  const t = ticket.data ?? null;
   const anomalyKeys = new Set(
     (anomalies.data?.anomalies ?? [])
       .filter((a) => a.issueKey === issueKey)
       .map((a) => `${a.flow}:${a.outcome}`)
   );
-  const timeline = buildTimeline(t.comments, t.auditEvents, anomalyKeys);
+  const timeline = t ? buildTimeline(t.comments, t.auditEvents, anomalyKeys) : [];
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
+    <div className="min-h-full bg-slate-50">
+      {/* Breadcrumb — always visible */}
+      <div className="border-b bg-white px-8 py-5 flex items-center gap-2">
         <Link
           to="/tickets"
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Tickets
         </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-mono font-semibold">{issueKey}</span>
+        <span className="text-slate-300">/</span>
+        <span className="font-mono font-semibold text-slate-800">{issueKey}</span>
       </div>
 
+      {ticket.isLoading ? (
+        <TicketDetailSkeleton />
+      ) : ticket.isError ? (
+        <div className="px-8 py-6">
+          <ErrorState error={ticket.error as Error} onRetry={ticket.refetch} />
+        </div>
+      ) : (
+      <div className="px-8 py-6 space-y-6 max-w-4xl">
       {/* Header card */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <FlowBadge flow={t.flow} />
-                <OutcomeBadge outcome={t.currentStatus} />
-                {t.hasError && <Badge variant="error">Has Error</Badge>}
+                <FlowBadge flow={t!.flow} />
+                <OutcomeBadge outcome={t!.currentStatus} />
+                {t!.hasError && <Badge variant="error">Has Error</Badge>}
               </div>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
                 <div>
                   <span className="text-muted-foreground">Employee: </span>
-                  {t.employeeEmail ?? "—"}
+                  {t!.employeeEmail ?? "—"}
                 </div>
                 <div>
                   <span className="text-muted-foreground">Manager: </span>
-                  {t.managerEmail ?? "—"}
+                  {t!.managerEmail ?? "—"}
                 </div>
                 <div>
                   <span className="text-muted-foreground">Last updated: </span>
-                  {formatIST(t.updatedAt)}
+                  {formatIST(t!.updatedAt)}
                 </div>
               </div>
             </div>
             <a
-              href={t.jiraUrl}
+              href={t!.jiraUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
@@ -166,6 +212,8 @@ export function TicketDetail() {
           )}
         </CardContent>
       </Card>
+      </div>
+      )}
     </div>
   );
 }

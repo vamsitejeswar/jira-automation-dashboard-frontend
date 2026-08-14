@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Info, ChevronUp, ChevronDown, AlertCircle, Activity, Zap } from "lucide-react";
-import { DatePicker } from "@/components/ui/date-picker";
-import { PageSpinner } from "@/components/ui/spinner";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
@@ -50,6 +50,54 @@ const SEVERITY_ROW_BG: Record<string, string> = {
   WARNING: "bg-amber-50/60",
   INFO:    "bg-sky-50/30",
 };
+
+function AnomaliesSkeleton() {
+  return (
+    <div className="px-8 py-6 space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-12" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b bg-slate-50 space-y-1.5">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+        <div className="divide-y divide-slate-100">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b bg-slate-50">
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="divide-y divide-slate-100">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-3 border-l-4 border-l-slate-200 px-5 py-3.5">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-3 flex-1 min-w-0" />
+              <Skeleton className="h-3 w-24 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Anomalies() {
   const [preset, setPreset]           = useState<Preset>("7d");
@@ -149,22 +197,13 @@ export function Anomalies() {
           </div>
 
           {/* Date range inputs */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">From</span>
-            <DatePicker
-              value={preset === "custom" ? customFrom : dates.from}
-              onChange={(v) => { setCustomFrom(v); setPreset("custom"); }}
-              placeholder="Start date"
-              className="h-9 text-xs"
-            />
-            <span className="text-xs text-slate-500 font-medium">To</span>
-            <DatePicker
-              value={preset === "custom" ? customTo : dates.to}
-              onChange={(v) => { setCustomTo(v); setPreset("custom"); }}
-              placeholder="End date"
-              className="h-9 text-xs"
-            />
-          </div>
+          <DateRangePicker
+            from={preset === "custom" ? customFrom : dates.from}
+            to={preset === "custom" ? customTo : dates.to}
+            onRangeChange={(f, t) => { setCustomFrom(f); setCustomTo(t); setPreset("custom"); }}
+            placeholder="Pick date range"
+            className="h-9 text-xs"
+          />
 
           {/* Include normal toggle */}
           <label className="ml-auto flex items-center gap-2 cursor-pointer group">
@@ -186,16 +225,22 @@ export function Anomalies() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-6 space-y-6">
-        {/* Stats bar */}
-        {data && (
+      {isLoading ? (
+        <AnomaliesSkeleton />
+      ) : isError ? (
+        <div className="px-8 py-6">
+          <ErrorState error={error as Error} onRetry={refetch} />
+        </div>
+      ) : (
+        <div className="px-8 py-6 space-y-6">
+          {/* Stats bar */}
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 flex-shrink-0">
                 <Activity className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 tabular-nums">{data.totalEventsScanned}</p>
+                <p className="text-2xl font-bold text-slate-900 tabular-nums">{data!.totalEventsScanned}</p>
                 <p className="text-xs text-slate-500 mt-0.5">Events scanned</p>
               </div>
             </div>
@@ -204,7 +249,7 @@ export function Anomalies() {
                 <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-600 tabular-nums">{data.totalAnomalies}</p>
+                <p className="text-2xl font-bold text-red-600 tabular-nums">{data!.totalAnomalies}</p>
                 <p className="text-xs text-slate-500 mt-0.5">Anomalies detected</p>
               </div>
             </div>
@@ -220,13 +265,7 @@ export function Anomalies() {
               </div>
             </div>
           </div>
-        )}
 
-        {isLoading ? (
-          <PageSpinner />
-        ) : isError ? (
-          <ErrorState error={error as Error} onRetry={refetch} />
-        ) : (
           <>
             {/* Breakdown table */}
             <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
@@ -335,8 +374,8 @@ export function Anomalies() {
               )}
             </div>
           </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardDrive, UserX, Laptop } from "lucide-react";
-import { PageSpinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { getToggles, updateToggle } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -201,6 +201,33 @@ function ToggleRow({
   );
 }
 
+function SettingsSkeleton() {
+  return (
+    <div className="px-8 py-6 space-y-5 max-w-3xl">
+      {SECTIONS.map(({ title, names }) => (
+        <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b bg-slate-50 space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+          <div className="divide-y divide-slate-100">
+            {names.map((n) => (
+              <div key={n} className="flex items-start gap-4 px-5 py-4">
+                <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-2 min-w-0">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-full max-w-xs" />
+                </div>
+                <Skeleton className="h-6 w-11 rounded-full flex-shrink-0 mt-0.5" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Settings() {
   const qc = useQueryClient();
   const { data, isLoading, isError, error } = useQuery({
@@ -227,10 +254,7 @@ export function Settings() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["toggles"] }),
   });
 
-  if (isLoading) return <PageSpinner />;
-  if (isError)   return <ErrorState error={error as Error} />;
-
-  const toggleMap = Object.fromEntries(data!.toggles.map((t) => [t.name, t]));
+  const toggleMap = data ? Object.fromEntries(data.toggles.map((t) => [t.name, t])) : {};
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -243,6 +267,11 @@ export function Settings() {
       </div>
 
       {/* Content */}
+      {isLoading ? (
+        <SettingsSkeleton />
+      ) : isError ? (
+        <div className="px-8 py-6"><ErrorState error={error as Error} /></div>
+      ) : (
       <div className="px-8 py-6 space-y-5 max-w-3xl">
         {SECTIONS.map(({ title, subtitle, names }) => (
           <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden">
@@ -270,6 +299,7 @@ export function Settings() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

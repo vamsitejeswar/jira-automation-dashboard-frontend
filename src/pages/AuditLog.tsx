@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
-import { PageSpinner } from "@/components/ui/spinner";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
@@ -90,22 +90,13 @@ export function AuditLog() {
             onValueChange={(v) => setFilters((f) => ({ ...f, severity: v || undefined, page: 1 }))}
             className="w-36"
           />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">From</span>
-            <DatePicker
-              value={filters.from ?? ""}
-              onChange={(v) => setFilters((f) => ({ ...f, from: v || undefined, page: 1 }))}
-              placeholder="Start date"
-              className="h-9 text-sm"
-            />
-            <span className="text-xs text-slate-500 font-medium">To</span>
-            <DatePicker
-              value={filters.to ?? ""}
-              onChange={(v) => setFilters((f) => ({ ...f, to: v || undefined, page: 1 }))}
-              placeholder="End date"
-              className="h-9 text-sm"
-            />
-          </div>
+          <DateRangePicker
+            from={filters.from ?? ""}
+            to={filters.to ?? ""}
+            onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
+            placeholder="Pick date range"
+            className="h-9 text-sm"
+          />
           {(filters.flow || filters.severity || filters.from || filters.to) && (
             <button
               className="text-xs font-semibold text-blue-600 hover:underline ml-1"
@@ -126,7 +117,23 @@ export function AuditLog() {
       <div className="px-8 py-6 space-y-4">
         <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
           {isLoading ? (
-            <PageSpinner />
+            <div>
+              <div className="flex items-center gap-4 px-5 py-3.5 border-b bg-slate-50">
+                {["w-28", "w-16", "w-20", "w-36", "w-16", "w-40"].map((w, i) => (
+                  <Skeleton key={i} className={`h-3 ${w}`} />
+                ))}
+              </div>
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 border-l-4 border-l-slate-100 px-5 py-3.5 border-b border-slate-100 last:border-0">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-3 w-36" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="flex-1 h-3" />
+                </div>
+              ))}
+            </div>
           ) : isError ? (
             <ErrorState error={error as Error} onRetry={refetch} />
           ) : data?.results.length === 0 ? (

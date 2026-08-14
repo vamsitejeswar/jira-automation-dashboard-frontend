@@ -11,9 +11,9 @@ import { Search, Download, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
-import { PageSpinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { OutcomeBadge, FlowBadge, Badge } from "@/components/ui/badge";
@@ -153,17 +153,11 @@ export function Tickets() {
           onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
           className="w-44"
         />
-        <DatePicker
-          value={filters.from ?? ""}
-          onChange={(v) => setFilters((f) => ({ ...f, from: v || undefined, page: 1 }))}
-          placeholder="From date"
-          className="h-9 text-xs"
-        />
-        <span className="text-xs text-muted-foreground">→</span>
-        <DatePicker
-          value={filters.to ?? ""}
-          onChange={(v) => setFilters((f) => ({ ...f, to: v || undefined, page: 1 }))}
-          placeholder="To date"
+        <DateRangePicker
+          from={filters.from ?? ""}
+          to={filters.to ?? ""}
+          onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
+          placeholder="Pick date range"
           className="h-9 text-xs"
         />
         <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
@@ -180,7 +174,23 @@ export function Tickets() {
       {/* Table */}
       <Card className="overflow-hidden">
         {isLoading ? (
-          <PageSpinner />
+          <div className="divide-y divide-slate-100">
+            <div className="flex items-center gap-4 px-4 py-3 border-b bg-slate-50/70">
+              {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
+                <Skeleton key={i} className={`h-3 ${w}`} />
+              ))}
+            </div>
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3.5 border-b border-slate-100 last:border-0">
+                <Skeleton className="h-4 w-16 rounded" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            ))}
+          </div>
         ) : isError ? (
           <ErrorState error={error as Error} onRetry={refetch} />
         ) : data?.results.length === 0 ? (

@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, MessageSquare,
+  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -247,22 +247,21 @@ export function TicketDetail() {
               if (item.kind === "comment") {
                 const avatarColor = colorForName(item.author);
                 return (
-                  <li key={i} className="flex items-start gap-3 px-6 py-4 hover:bg-slate-50/70 transition-colors">
+                  <li key={i} className="flex items-start gap-3 px-6 py-5 hover:bg-slate-50/70 transition-colors">
                     <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 text-xs font-bold text-white"
+                      className="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0 text-xs font-bold text-white"
                       style={{ background: avatarColor }}
                     >
                       {initials(item.author)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-bold text-slate-900">{item.author}</span>
-                        <Badge variant="muted">
-                          <MessageSquare className="h-3 w-3" /> Comment
-                        </Badge>
-                        <span className="ml-auto text-xs text-slate-400">{formatIST(item.createdAt)}</span>
+                        <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">{formatIST(item.createdAt)}</span>
                       </div>
-                      <p className="mt-1 text-sm whitespace-pre-wrap text-slate-700">{item.body}</p>
+                      <div className="mt-2.5 rounded-lg bg-slate-50 px-4 py-3">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{item.body}</p>
+                      </div>
                     </div>
                   </li>
                 );

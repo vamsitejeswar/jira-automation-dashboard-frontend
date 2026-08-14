@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
@@ -61,14 +62,16 @@ export function AuditLog() {
               Raw Cloud Logging entries — 30-day retention
             </p>
           </div>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExport}
             disabled={!data?.results.length}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="gap-2"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
             Export Excel
-          </button>
+          </Button>
         </div>
 
         {/* Filter bar */}
@@ -114,17 +117,17 @@ export function AuditLog() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-6 space-y-4">
+      <div className="px-8 py-6 space-y-6">
         <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
           {isLoading ? (
-            <div>
-              <div className="flex items-center gap-4 px-5 py-3.5 border-b bg-slate-50">
+            <div className="space-y-3.5 px-5 py-3.5">
+              <div className="flex items-center gap-4">
                 {["w-28", "w-16", "w-20", "w-36", "w-16", "w-40"].map((w, i) => (
                   <Skeleton key={i} className={`h-3 ${w}`} />
                 ))}
               </div>
               {[...Array(10)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 border-l-4 border-l-slate-100 px-5 py-3.5 border-b border-slate-100 last:border-0">
+                <div key={i} className="flex items-center gap-4">
                   <Skeleton className="h-3 w-28" />
                   <Skeleton className="h-5 w-14 rounded-full" />
                   <Skeleton className="h-5 w-20 rounded-full" />
@@ -210,33 +213,35 @@ export function AuditLog() {
               of <span className="font-semibold text-slate-800">{data.total}</span> entries
             </span>
             <div className="flex items-center gap-1">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={currentPage <= 1}
                 onClick={() => setFilters((f) => ({ ...f, page: currentPage - 1 }))}
-                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="h-7 gap-1 text-xs"
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Previous
-              </button>
+              </Button>
               {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
-                <button
+                <Button
                   key={p}
+                  variant={p === currentPage ? "default" : "ghost"}
+                  size="sm"
                   onClick={() => setFilters((f) => ({ ...f, page: p }))}
-                  className={`h-7 w-7 rounded-lg text-xs font-semibold transition-colors ${
-                    p === currentPage
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
+                  className="h-7 w-7 text-xs p-0"
                 >
                   {p}
-                </button>
+                </Button>
               ))}
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={currentPage >= totalPages}
                 onClick={() => setFilters((f) => ({ ...f, page: currentPage + 1 }))}
-                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="h-7 gap-1 text-xs"
               >
                 Next <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+              </Button>
             </div>
           </div>
         )}

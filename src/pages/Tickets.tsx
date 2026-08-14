@@ -40,10 +40,18 @@ const columns = [
     cell: (info) => (
       <Link
         to={`/tickets/${info.getValue()}`}
-        className="font-mono text-xs font-bold text-primary hover:underline"
+        className="font-mono text-xs font-bold text-blue-600 hover:underline"
       >
         {info.getValue()}
       </Link>
+    ),
+  }),
+  col.accessor("title", {
+    header: "Title",
+    cell: (info) => (
+      <span className="text-xs text-slate-700 line-clamp-1 max-w-xs" title={info.getValue() ?? undefined}>
+        {info.getValue() ?? "—"}
+      </span>
     ),
   }),
   col.accessor("flow", {
@@ -57,19 +65,19 @@ const columns = [
   col.accessor("employeeEmail", {
     header: "Employee",
     cell: (info) => (
-      <span className="text-xs text-foreground/70">{info.getValue() ?? "—"}</span>
+      <span className="text-xs text-slate-500">{info.getValue() ?? "—"}</span>
     ),
   }),
   col.accessor("managerEmail", {
     header: "Manager",
     cell: (info) => (
-      <span className="text-xs text-foreground/70">{info.getValue() ?? "—"}</span>
+      <span className="text-xs text-slate-500">{info.getValue() ?? "—"}</span>
     ),
   }),
   col.accessor("updatedAt", {
     header: "Last Updated",
     cell: (info) => (
-      <span className="tabular-nums text-xs text-muted-foreground">{formatIST(info.getValue())}</span>
+      <span className="tabular-nums text-xs text-slate-400">{formatIST(info.getValue())}</span>
     ),
   }),
   col.accessor("hasError", {
@@ -111,77 +119,79 @@ export function Tickets() {
   const currentPage = filters.page ?? 1;
 
   return (
-    <div className="min-h-full bg-slate-50 animate-fade-in">
+    <div className="min-h-full bg-slate-50">
       {/* Header */}
-      <div className="border-b bg-white px-6 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Tickets</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            All onboarding &amp; offboarding tickets
-          </p>
+      <div className="border-b bg-white px-8 py-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tickets</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              All onboarding &amp; offboarding tickets
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={!data?.results.length}
+            className="gap-2"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Excel
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={!data?.results.length}
-          className="gap-2"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export Excel
-        </Button>
-      </div>
 
-      <div className="p-6 space-y-5">
-      {/* Filters bar */}
-      <div className="flex flex-wrap gap-2 items-center rounded-xl border bg-card px-4 py-3 shadow-card">
-        <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-        <div className="relative flex-1 min-w-44">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Issue key or email..."
-            className="pl-8 h-8 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && applySearch()}
+        {/* Filters */}
+        <div className="mt-5 flex flex-wrap gap-2 items-center">
+          <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+          <div className="relative flex-1 min-w-44">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Issue key or email..."
+              className="pl-8 h-8 text-xs"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applySearch()}
+            />
+          </div>
+          <Select
+            options={FLOW_OPTIONS}
+            placeholder="All flows"
+            value={filters.flow ?? ""}
+            onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
+            className="w-44"
           />
+          <DateRangePicker
+            from={filters.from ?? ""}
+            to={filters.to ?? ""}
+            onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
+            placeholder="Pick date range"
+            className="h-9 text-xs"
+          />
+          <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-xs"
+            onClick={() => { setFilters({ page: 1, pageSize: 25 }); setSearch(""); }}
+          >
+            Clear
+          </Button>
         </div>
-        <Select
-          options={FLOW_OPTIONS}
-          placeholder="All flows"
-          value={filters.flow ?? ""}
-          onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
-          className="w-44"
-        />
-        <DateRangePicker
-          from={filters.from ?? ""}
-          to={filters.to ?? ""}
-          onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
-          placeholder="Pick date range"
-          className="h-9 text-xs"
-        />
-        <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 text-xs"
-          onClick={() => { setFilters({ page: 1, pageSize: 25 }); setSearch(""); }}
-        >
-          Clear
-        </Button>
       </div>
 
+      <div className="px-8 py-6 space-y-6">
       {/* Table */}
       <Card className="overflow-hidden">
         {isLoading ? (
-          <div className="divide-y divide-slate-100">
-            <div className="flex items-center gap-4 px-4 py-3 border-b bg-slate-50/70">
+          <div className="space-y-3.5 px-4 py-3">
+            <div className="flex items-center gap-4">
               {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
                 <Skeleton key={i} className={`h-3 ${w}`} />
               ))}
             </div>
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-4 py-3.5 border-b border-slate-100 last:border-0">
+              <div key={i} className="flex items-center gap-4">
                 <Skeleton className="h-4 w-16 rounded" />
                 <Skeleton className="h-5 w-20 rounded-full" />
                 <Skeleton className="h-5 w-20 rounded-full" />
@@ -198,13 +208,13 @@ export function Tickets() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-muted/30">
+              <thead className="border-b bg-slate-50">
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
                     {hg.headers.map((h) => (
                       <th
                         key={h.id}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
                       >
                         {flexRender(h.column.columnDef.header, h.getContext())}
                       </th>
@@ -212,11 +222,11 @@ export function Tickets() {
                   </tr>
                 ))}
               </thead>
-              <tbody className="divide-y">
-                {table.getRowModel().rows.map((row, i) => (
+              <tbody className="divide-y divide-slate-100">
+                {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className={`hover:bg-primary/4 transition-colors ${i % 2 === 0 ? "" : "bg-muted/20"}`}
+                    className="hover:bg-slate-50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-4 py-3">
@@ -233,14 +243,14 @@ export function Tickets() {
 
       {/* Pagination */}
       {data && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-slate-500">
           <span>
             Showing{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-slate-900">
               {(currentPage - 1) * (filters.pageSize ?? 25) + 1}–
               {Math.min(currentPage * (filters.pageSize ?? 25), data.total)}
             </span>{" "}
-            of <span className="font-semibold text-foreground">{data.total}</span> tickets
+            of <span className="font-semibold text-slate-900">{data.total}</span> tickets
           </span>
           <div className="flex items-center gap-1">
             <Button

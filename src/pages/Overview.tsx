@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown,
+  Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
@@ -24,10 +24,10 @@ function getPresetDates(p: Preset) {
 }
 
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"  as const, label: "Onboarded",     icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", trend: +12, sub: "employees",         viewTo: "/tickets" },
-  { dataKey: "offboardedCount" as const, label: "Offboarded",    icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", trend: +4,  sub: "employees",         viewTo: "/tickets" },
-  { dataKey: "akamaiClones"    as const, label: "Akamai Clones", icon: Shield,   accent: "#059669", lightBg: "#ecfdf5", trend: +8,  sub: "access provisioned", viewTo: "/tickets" },
-  { dataKey: "failuresCount"   as const, label: "Failures",      icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", trend: -3,  sub: "need attention",     viewTo: "/anomalies" },
+  { dataKey: "onboardedCount"  as const, label: "Onboarded",     icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", trend: +12, sub: "Employees",         viewTo: "/tickets" },
+  { dataKey: "offboardedCount" as const, label: "Offboarded",    icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", trend: +4,  sub: "Employees",         viewTo: "/tickets" },
+  { dataKey: "akamaiClones"    as const, label: "Akamai Clones", icon: Shield,   accent: "#059669", lightBg: "#ecfdf5", trend: +8,  sub: "Access provisioned", viewTo: "/tickets" },
+  { dataKey: "failuresCount"   as const, label: "Failures",      icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", trend: -3,  sub: "Need attention",     viewTo: "/anomalies" },
 ];
 
 /* ── Skeletons ──────────────────────────────────────────────── */
@@ -36,8 +36,7 @@ function OverviewSkeleton() {
     <div className="px-8 py-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col">
-            <Skeleton className="h-1 rounded-none" />
+          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="p-5 flex-1 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -49,14 +48,14 @@ function OverviewSkeleton() {
               </div>
               <Skeleton className="h-3 w-28" />
             </div>
-            <div className="border-t border-slate-100 px-5 py-2.5">
+            <div className="px-5 py-2.5">
               <Skeleton className="h-3 w-20" />
             </div>
           </div>
         ))}
       </div>
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b bg-slate-50 flex items-center justify-between">
+      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-4 flex items-center justify-between">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-3 w-36" />
         </div>
@@ -64,11 +63,11 @@ function OverviewSkeleton() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-xl border bg-white shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b bg-slate-50"><Skeleton className="h-4 w-36" /></div>
-            <div className="divide-y divide-slate-100">
+          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4"><Skeleton className="h-4 w-36" /></div>
+            <div className="space-y-3 px-5 pb-5">
               {[...Array(5)].map((_, j) => (
-                <div key={j} className="flex items-center gap-3 px-5 py-3">
+                <div key={j} className="flex items-center gap-3">
                   <Skeleton className="h-5 w-14 rounded-full" />
                   <Skeleton className="h-4 w-20 rounded-full" />
                   <Skeleton className="flex-1 h-3" />
@@ -168,8 +167,11 @@ export function Overview() {
           </div>
 
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b bg-slate-50 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">Activity trend</h2>
+            <div className="px-5 py-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Activity className="h-4 w-4 text-slate-400" />
+                Activity trend
+              </h2>
               <span className="text-xs text-slate-400">{dates.from} → {dates.to}</span>
             </div>
             <div className="p-5">
@@ -180,16 +182,19 @@ export function Overview() {
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Anomalies */}
             <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
-                <h2 className="text-sm font-semibold text-slate-700">Recent anomalies</h2>
+              <div className="flex items-center justify-between px-5 py-4">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <AlertTriangle className="h-4 w-4 text-slate-400" />
+                  Recent anomalies
+                </h2>
                 <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
                   View all <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
               {anomalies.isLoading ? (
-                <div className="divide-y divide-slate-100">
+                <div className="space-y-3 px-5 py-3">
                   {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3">
+                    <div key={i} className="flex items-center gap-3">
                       <Skeleton className="h-5 w-14 rounded-full" />
                       <Skeleton className="h-4 w-20 rounded-full" />
                       <Skeleton className="flex-1 h-3" />
@@ -216,14 +221,14 @@ export function Overview() {
 
             {/* Jobs */}
             <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b bg-slate-50 flex items-center gap-2">
+              <div className="px-5 py-4 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-slate-400" />
                 <h2 className="text-sm font-semibold text-slate-700">Upcoming scheduled runs</h2>
               </div>
               {jobs.isLoading ? (
-                <div className="divide-y divide-slate-100">
+                <div className="space-y-3.5 px-5 py-3.5">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3.5">
+                    <div key={i} className="flex items-center gap-3">
                       <Skeleton className="h-2 w-2 rounded-full" />
                       <div className="flex-1 space-y-1.5">
                         <Skeleton className="h-3 w-40" />

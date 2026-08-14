@@ -36,7 +36,7 @@ function buildTimeline(
 function TicketDetailSkeleton() {
   return (
     <div className="px-8 py-6 space-y-6 max-w-4xl">
-      <div className="rounded-xl border bg-white shadow-sm p-6">
+      <div className="rounded-xl bg-white shadow-sm p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3 flex-1">
             <div className="flex items-center gap-2">
@@ -52,19 +52,17 @@ function TicketDetailSkeleton() {
           <Skeleton className="h-4 w-24 flex-shrink-0" />
         </div>
       </div>
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b bg-slate-50">
+      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="px-6 py-4">
           <Skeleton className="h-5 w-32" />
         </div>
-        <div className="relative ml-6 border-l border-slate-200">
+        <div className="space-y-5 px-6 pb-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="ml-6 py-4 pr-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <Skeleton className="h-5 w-14 rounded-full" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-3 w-24 ml-auto" />
-              </div>
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-3 w-24 ml-auto" />
             </div>
           ))}
         </div>

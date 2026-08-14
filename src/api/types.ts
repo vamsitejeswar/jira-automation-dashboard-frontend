@@ -28,6 +28,10 @@ export type AuditEvent = z.infer<typeof AuditEventSchema>;
 // ── Ticket ─────────────────────────────────────────────────────────────────────
 export const TicketSummarySchema = z.object({
   issueKey: z.string(),
+  // Real Jira issue summary (e.g. "Employee Offboarding | | Employee Name")
+  // -- looked up live from Jira, so null if that lookup failed or the
+  // ticket no longer exists.
+  title: z.string().nullable().optional(),
   flow: FlowSchema,
   currentStatus: z.string(),
   employeeEmail: z.string().nullable(),

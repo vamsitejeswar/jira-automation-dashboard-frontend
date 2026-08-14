@@ -150,11 +150,7 @@ function ToggleRow({
               <AlertTriangle className="h-3 w-3" /> Master switch
             </span>
           )}
-          <span
-            className={`ml-auto text-xs font-semibold ${toggle.value ? "text-emerald-600" : "text-slate-400"}`}
-          >
-            {toggle.value ? "Enabled" : "Disabled"}
-          </span>
+        
         </div>
         <p className="mt-0.5 text-xs text-slate-500 leading-relaxed">{DESCRIPTIONS[toggle.name]}</p>
         {toggle.lastChangedAt && (
@@ -205,14 +201,14 @@ function SettingsSkeleton() {
   return (
     <div className="px-8 py-6 space-y-5 max-w-3xl">
       {SECTIONS.map(({ title, names }) => (
-        <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b bg-slate-50 space-y-1.5">
+        <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 space-y-1.5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-56" />
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-4 px-5 pb-5">
             {names.map((n) => (
-              <div key={n} className="flex items-start gap-4 px-5 py-4">
+              <div key={n} className="flex items-start gap-4">
                 <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-2 min-w-0">
                   <Skeleton className="h-4 w-36" />

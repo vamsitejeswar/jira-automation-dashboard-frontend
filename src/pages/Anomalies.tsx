@@ -56,7 +56,7 @@ function AnomaliesSkeleton() {
     <div className="px-8 py-6 space-y-6">
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
+          <div key={i} className="rounded-xl bg-white px-5 py-4 shadow-sm flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
             <div className="space-y-2">
               <Skeleton className="h-6 w-12" />
@@ -65,14 +65,14 @@ function AnomaliesSkeleton() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b bg-slate-50 space-y-1.5">
+      <div className="rounded-xl bg-white overflow-hidden shadow-sm">
+        <div className="px-5 py-4 space-y-1.5">
           <Skeleton className="h-4 w-44" />
           <Skeleton className="h-3 w-32" />
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="space-y-3 px-5 pb-5">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-5 py-3">
+            <div key={i} className="flex items-center gap-4">
               <Skeleton className="h-5 w-20 rounded-full" />
               <Skeleton className="h-4 w-36" />
               <Skeleton className="h-4 w-8" />
@@ -80,13 +80,13 @@ function AnomaliesSkeleton() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b bg-slate-50">
+      <div className="rounded-xl bg-white overflow-hidden shadow-sm">
+        <div className="px-5 py-4">
           <Skeleton className="h-4 w-28" />
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="space-y-3 px-5 pb-5">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-3 border-l-4 border-l-slate-200 px-5 py-3.5">
+            <div key={i} className="flex flex-wrap items-center gap-3">
               <Skeleton className="h-5 w-14 rounded-full" />
               <Skeleton className="h-5 w-20 rounded-full" />
               <Skeleton className="h-3 flex-1 min-w-0" />
@@ -269,7 +269,7 @@ export function Anomalies() {
           <>
             {/* Breakdown table */}
             <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b bg-slate-50">
+              <div className="px-5 py-4">
                 <h2 className="text-sm font-semibold text-slate-700">Breakdown by flow &amp; outcome</h2>
                 <p className="text-xs text-slate-500 mt-0.5">Click columns to sort</p>
               </div>
@@ -324,7 +324,7 @@ export function Anomalies() {
 
             {/* Event list */}
             <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-              <div className="px-5 py-4 border-b bg-slate-50 flex items-center gap-2">
+              <div className="px-5 py-4 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 <h2 className="text-sm font-semibold text-slate-700">
                   {includeNormal ? "All events" : "Anomaly events"}

@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Ticket,
-  ToggleLeft,
   AlertTriangle,
   ScrollText,
   Zap,
   UserSearch,
+  Settings,
 } from "lucide-react";
 
 const NAV = [
@@ -16,7 +16,7 @@ const NAV = [
   { to: "/employees", icon: UserSearch, label: "Employee Search" },
   { to: "/anomalies", icon: AlertTriangle, label: "Anomalies" },
   { to: "/audit-log", icon: ScrollText, label: "Audit Log" },
-  { to: "/settings", icon: ToggleLeft, label: "Settings" },
+  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function Sidebar() {
@@ -55,7 +55,7 @@ export function Sidebar() {
                   )
                 }
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 <span className="truncate">{label}</span>
               </NavLink>
             </li>

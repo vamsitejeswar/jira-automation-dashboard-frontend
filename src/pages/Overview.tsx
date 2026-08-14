@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
+  ArrowUpRight,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
@@ -218,8 +219,17 @@ export function Overview() {
                       <SeverityBadge severity={a.severity} />
                       <FlowBadge flow={a.flow} />
                       <span className="flex-1 truncate text-xs text-slate-500">{a.outcome}</span>
-                      {a.issueKey && <Link to={`/tickets/${a.issueKey}`} className="shrink-0 font-mono text-xs text-blue-600 hover:underline font-bold">{a.issueKey}</Link>}
+                      {a.issueKey && (
+                        <Link
+                          to={`/tickets/${a.issueKey}`}
+                          className="flex items-center gap-0.5 shrink-0 font-mono text-xs font-bold text-blue-600 hover:underline"
+                        >
+                          {a.issueKey}
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
                       <span className="shrink-0 text-xs text-slate-400 tabular-nums">{formatISTShort(a.timestamp)}</span>
+                      
                     </li>
                   ))}
                 </ul>

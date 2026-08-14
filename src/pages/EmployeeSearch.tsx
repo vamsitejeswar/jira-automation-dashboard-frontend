@@ -18,10 +18,12 @@ import {
   Database,
   UserX,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { getEmployeeProgress, getEmployeeSearchSuggestions } from "@/api";
 import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
 import { formatIST, titleCase } from "@/lib/utils";
@@ -192,16 +194,30 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
 
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 text-sm font-bold text-white"
             style={{ background: isOnboarding ? "#2563eb" : "#7c3aed" }}
           >
             {isOnboarding ? "ON" : "OFF"}
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-slate-800">
+          <div className="min-w-0 flex-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-base font-bold text-slate-900 truncate cursor-default">
+                  {record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>{record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}</TooltipContent>
+            </Tooltip>
+            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                style={{
+                  background: isOnboarding ? "#eff6ff" : "#f5f3ff",
+                  color: isOnboarding ? "#2563eb" : "#7c3aed",
+                }}
+              >
                 {isOnboarding ? "Onboarding" : "Offboarding"}
               </span>
               <span
@@ -215,12 +231,7 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
                 {statusCfg.label}
               </span>
             </div>
-            {record.title && (
-              <p className="mt-0.5 truncate text-xs font-medium text-slate-600" title={record.title}>
-                {record.title}
-              </p>
-            )}
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               {showEmail && <span className="font-medium text-slate-600">{record.email}</span>}
               {showEmail && record.startedAt && " — "}
               {record.startedAt && `Started ${formatIST(record.startedAt)}`}
@@ -258,8 +269,13 @@ export function EmployeeSearch() {
   const [inputVal, setInputVal] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [suggestions, setSuggestions] = useState<EmployeeSearchResult[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards against a slower, stale request's response landing after a
+  // newer one already resolved -- only the latest fired request is allowed
+  // to update state.
+  const requestId = useRef(0);
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
@@ -274,12 +290,25 @@ export function EmployeeSearch() {
   useEffect(() => {
     if (inputVal.trim().length <= 2) {
       setSuggestions([]);
+      setSuggestionsLoading(false);
       return;
     }
     const timer = setTimeout(() => {
+      const thisRequest = ++requestId.current;
+      setSuggestionsLoading(true);
       getEmployeeSearchSuggestions(inputVal.trim())
-        .then(res => setSuggestions(res.results))
-        .catch(() => setSuggestions([]));
+        .then(res => {
+          if (requestId.current !== thisRequest) return;
+          setSuggestions(res.results);
+        })
+        .catch(() => {
+          if (requestId.current !== thisRequest) return;
+          setSuggestions([]);
+        })
+        .finally(() => {
+          if (requestId.current !== thisRequest) return;
+          setSuggestionsLoading(false);
+        });
     }, SUGGESTIONS_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [inputVal]);
@@ -311,6 +340,7 @@ export function EmployeeSearch() {
   const showEmailPerCard = (data?.resolvedEmails.length ?? 0) > 1;
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="min-h-full bg-slate-50">
       {/* Page header */}
       <div className="border-b bg-white px-8 py-6">
@@ -330,7 +360,7 @@ export function EmployeeSearch() {
             <Input
               type="text"
               placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
-              className="w-full h-11 pl-10 text-sm"
+              className="w-full h-11 pl-10 pr-10 text-sm"
               value={inputVal}
               onChange={e => { setInputVal(e.target.value); setShowSuggestions(true); }}
               onFocus={() => setShowSuggestions(true)}
@@ -341,6 +371,9 @@ export function EmployeeSearch() {
                 blurTimeout.current = setTimeout(() => setShowSuggestions(false), 150);
               }}
             />
+            {suggestionsLoading && (
+              <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 animate-spin" />
+            )}
 
             {showSuggestions && suggestions.length > 0 && (
               <ul
@@ -512,5 +545,6 @@ export function EmployeeSearch() {
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 }

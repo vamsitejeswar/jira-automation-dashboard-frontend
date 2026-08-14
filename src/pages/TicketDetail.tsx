@@ -1,13 +1,44 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, AlertTriangle, ExternalLink } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, MessageSquare,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Badge, OutcomeBadge, SeverityBadge, FlowBadge } from "@/components/ui/badge";
 import { getTicketDetail, getAnomalies } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { AuditEvent } from "@/api";
+
+const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
+  gws_mailbox:           { icon: MailOpen,    color: "#0284c7" },
+  akamai_access:         { icon: ShieldCheck, color: "#7c3aed" },
+  drive_transfer:        { icon: HardDrive,   color: "#d97706" },
+  scheduled_credentials: { icon: Key,         color: "#16a34a" },
+  data_transfer:         { icon: Database,    color: "#ea580c" },
+  toggle_change:         { icon: ToggleLeft,  color: "#64748b" },
+};
+
+const SEVERITY_ROW: Record<string, string> = {
+  ERROR:   "border-l-red-500 bg-red-50/40",
+  WARNING: "border-l-amber-400 bg-amber-50/30",
+  INFO:    "border-l-slate-200",
+};
+
+const AVATAR_COLORS = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2", "#db2777", "#4338ca"];
+
+function colorForName(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 type TimelineItem =
   | { kind: "comment"; author: string; body: string; createdAt: string }
@@ -96,7 +127,7 @@ export function TicketDetail() {
   return (
     <div className="min-h-full bg-slate-50">
       {/* Breadcrumb — always visible */}
-      <div className="border-b bg-white px-8 py-5 flex items-center gap-2">
+      <div className="border-b bg-white px-8 py-6 flex items-center gap-2">
         <Link
           to="/tickets"
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -117,99 +148,137 @@ export function TicketDetail() {
       ) : (
       <div className="px-8 py-6 space-y-6 max-w-4xl">
       {/* Header card */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-4">
+      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+        <div className="h-1.5" style={{ background: FLOW_META[t!.flow]?.color ?? "#64748b" }} />
+        <div className="p-6 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div
+              className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0"
+              style={{ background: (FLOW_META[t!.flow]?.color ?? "#64748b") + "18" }}
+            >
+              {(() => {
+                const FlowIcon = FLOW_META[t!.flow]?.icon ?? ToggleLeft;
+                return <FlowIcon className="h-5 w-5" style={{ color: FLOW_META[t!.flow]?.color ?? "#64748b" }} />;
+              })()}
+            </div>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
+              {t!.title && (
+                <h1 className="text-base font-bold text-slate-900 leading-snug">{t!.title}</h1>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
                 <FlowBadge flow={t!.flow} />
                 <OutcomeBadge outcome={t!.currentStatus} />
+                {t!.jiraStatus && <Badge variant="muted">{t!.jiraStatus}</Badge>}
                 {t!.hasError && <Badge variant="error">Has Error</Badge>}
               </div>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700">
                 <div>
-                  <span className="text-muted-foreground">Employee: </span>
+                  <span className="text-slate-500">Employee: </span>
+                  {t!.employeeName ? `${t!.employeeName} — ` : ""}
                   {t!.employeeEmail ?? "—"}
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Manager: </span>
+                  <span className="text-slate-500">Manager: </span>
                   {t!.managerEmail ?? "—"}
                 </div>
+                {t!.createdAt && (
+                  <div>
+                    <span className="text-slate-500">Created: </span>
+                    {formatIST(t!.createdAt)}
+                  </div>
+                )}
                 <div>
-                  <span className="text-muted-foreground">Last updated: </span>
+                  <span className="text-slate-500">Last updated: </span>
                   {formatIST(t!.updatedAt)}
                 </div>
               </div>
             </div>
-            <a
-              href={t!.jiraUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
-            >
-              Open in Jira <ExternalLink className="h-3.5 w-3.5" />
-            </a>
           </div>
-        </CardContent>
-      </Card>
+          <a
+            href={t!.jiraUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline shrink-0"
+          >
+            Open in Jira <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      </div>
 
       {/* Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit timeline</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {timeline.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No activity recorded.</p>
-          ) : (
-            <ol className="relative ml-6 border-l border-border">
-              {timeline.map((item, i) => (
-                <li key={i} className="mb-0 pb-0">
-                  {item.kind === "comment" ? (
-                    <div className="ml-6 py-4 pr-6">
-                      <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-border bg-card" />
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-xs font-medium">{item.author}</span>
-                        <span className="text-xs text-muted-foreground">{formatIST(item.createdAt)}</span>
-                        <Badge variant="muted">Comment</Badge>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap text-foreground/80">{item.body}</p>
+      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+        <div className="px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Audit timeline</h2>
+        </div>
+        {timeline.length === 0 ? (
+          <p className="px-6 pb-6 text-sm text-slate-500">No activity recorded.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {timeline.map((item, i) => {
+              if (item.kind === "comment") {
+                const avatarColor = colorForName(item.author);
+                return (
+                  <li key={i} className="flex items-start gap-3 px-6 py-4 hover:bg-slate-50/70 transition-colors">
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 text-xs font-bold text-white"
+                      style={{ background: avatarColor }}
+                    >
+                      {initials(item.author)}
                     </div>
-                  ) : (
-                    <div className="ml-6 py-4 pr-6">
-                      <div
-                        className={`absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border ${
-                          item.isAnomaly
-                            ? "border-amber-400 bg-amber-100"
-                            : "border-primary/40 bg-primary/10"
-                        }`}
-                      />
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <SeverityBadge severity={item.event.severity} />
-                        <FlowBadge flow={item.event.flow} />
-                        <OutcomeBadge outcome={item.event.outcome} />
-                        {item.isAnomaly && (
-                          <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
-                            <AlertTriangle className="h-3 w-3" /> Anomaly
-                          </span>
-                        )}
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {formatIST(item.event.timestamp)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900">{item.author}</span>
+                        <Badge variant="muted">
+                          <MessageSquare className="h-3 w-3" /> Comment
+                        </Badge>
+                        <span className="ml-auto text-xs text-slate-400">{formatIST(item.createdAt)}</span>
+                      </div>
+                      <p className="mt-1 text-sm whitespace-pre-wrap text-slate-700">{item.body}</p>
+                    </div>
+                  </li>
+                );
+              }
+
+              const flowMeta = FLOW_META[item.event.flow];
+              const FlowIcon = flowMeta?.icon ?? ToggleLeft;
+              const rowStyle = item.isAnomaly
+                ? "border-l-amber-400 bg-amber-50/30"
+                : (SEVERITY_ROW[item.event.severity] ?? "border-l-slate-200");
+
+              return (
+                <li key={i} className={`flex items-start gap-3 border-l-4 px-6 py-4 hover:brightness-[0.98] transition-colors ${rowStyle}`}>
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0"
+                    style={{ background: (flowMeta?.color ?? "#64748b") + "18" }}
+                  >
+                    <FlowIcon className="h-4 w-4" style={{ color: flowMeta?.color ?? "#64748b" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <SeverityBadge severity={item.event.severity} />
+                      <FlowBadge flow={item.event.flow} />
+                      <OutcomeBadge outcome={item.event.outcome} />
+                      {item.isAnomaly && (
+                        <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                          <AlertTriangle className="h-3 w-3" /> Anomaly
                         </span>
-                      </div>
-                      {item.event.error && (
-                        <p className="mt-1 rounded bg-destructive/5 px-2 py-1 font-mono text-xs text-destructive">
-                          {item.event.error}
-                        </p>
                       )}
+                      <span className="ml-auto text-xs text-slate-400">
+                        {formatIST(item.event.timestamp)}
+                      </span>
                     </div>
-                  )}
+                    {item.event.error && (
+                      <p className="mt-2 rounded-md bg-red-50 border border-red-100 px-2 py-1 font-mono text-xs text-red-600">
+                        {item.event.error}
+                      </p>
+                    )}
+                  </div>
                 </li>
-              ))}
-            </ol>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </ul>
+        )}
+      </div>
       </div>
       )}
     </div>

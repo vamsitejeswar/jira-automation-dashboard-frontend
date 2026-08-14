@@ -51,6 +51,12 @@ export const TicketDetailSchema = TicketSummarySchema.extend({
   jiraUrl: z.string(),
   comments: z.array(CommentSchema),
   auditEvents: z.array(AuditEventSchema),
+  // Pulled live from the real Jira ticket (and its parent, for a subtask) --
+  // fills in what this automation's own audit trail doesn't have, e.g. for
+  // a ticket it never fully processed. Null/absent if that lookup failed.
+  jiraStatus: z.string().nullable().optional(),
+  createdAt: z.string().nullable().optional(),
+  employeeName: z.string().nullable().optional(),
 });
 export type TicketDetail = z.infer<typeof TicketDetailSchema>;
 

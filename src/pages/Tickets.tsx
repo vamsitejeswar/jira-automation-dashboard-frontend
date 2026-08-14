@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { OutcomeBadge, FlowBadge, Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getTickets } from "@/api";
 import type { TicketFilters } from "@/api";
 import type { TicketSummary } from "@/api";
@@ -40,7 +41,7 @@ const columns = [
     cell: (info) => (
       <Link
         to={`/tickets/${info.getValue()}`}
-        className="font-mono text-xs font-bold text-blue-600 hover:underline"
+        className="font-mono text-xs font-bold text-blue-600 hover:underline whitespace-nowrap"
       >
         {info.getValue()}
       </Link>
@@ -48,11 +49,20 @@ const columns = [
   }),
   col.accessor("title", {
     header: "Title",
-    cell: (info) => (
-      <span className="text-xs text-slate-700 line-clamp-1 max-w-xs" title={info.getValue() ?? undefined}>
-        {info.getValue() ?? "—"}
-      </span>
-    ),
+    cell: (info) => {
+      const value = info.getValue();
+      if (!value) return <span className="text-xs text-slate-400">—</span>;
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-xs text-slate-700 line-clamp-1 max-w-64 cursor-default">
+              {value}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{value}</TooltipContent>
+        </Tooltip>
+      );
+    },
   }),
   col.accessor("flow", {
     header: "Flow",
@@ -60,7 +70,12 @@ const columns = [
   }),
   col.accessor("currentStatus", {
     header: "Status",
-    cell: (info) => <OutcomeBadge outcome={info.getValue()} />,
+    cell: (info) => (
+      <div className="flex items-center gap-1.5">
+        <OutcomeBadge outcome={info.getValue()} />
+        {info.row.original.hasError && <Badge variant="error">Error</Badge>}
+      </div>
+    ),
   }),
   col.accessor("employeeEmail", {
     header: "Employee",
@@ -68,24 +83,11 @@ const columns = [
       <span className="text-xs text-slate-500">{info.getValue() ?? "—"}</span>
     ),
   }),
-  col.accessor("managerEmail", {
-    header: "Manager",
-    cell: (info) => (
-      <span className="text-xs text-slate-500">{info.getValue() ?? "—"}</span>
-    ),
-  }),
   col.accessor("updatedAt", {
     header: "Last Updated",
     cell: (info) => (
-      <span className="tabular-nums text-xs text-slate-400">{formatIST(info.getValue())}</span>
+      <span className="tabular-nums text-xs text-slate-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
     ),
-  }),
-  col.accessor("hasError", {
-    header: "",
-    cell: (info) =>
-      info.getValue() ? (
-        <Badge variant="error">Error</Badge>
-      ) : null,
   }),
 ];
 
@@ -119,6 +121,7 @@ export function Tickets() {
   const currentPage = filters.page ?? 1;
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="min-h-full bg-slate-50">
       {/* Header */}
       <div className="border-b bg-white px-8 py-6">
@@ -186,18 +189,21 @@ export function Tickets() {
         {isLoading ? (
           <div className="space-y-3.5 px-4 py-3">
             <div className="flex items-center gap-4">
-              {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
-                <Skeleton key={i} className={`h-3 ${w}`} />
-              ))}
+              <Skeleton className="h-3 w-[8%]" />
+              <Skeleton className="h-3 w-[30%]" />
+              <Skeleton className="h-3 w-[12%]" />
+              <Skeleton className="h-3 w-[12%]" />
+              <Skeleton className="h-3 w-[20%]" />
+              <Skeleton className="h-3 w-[15%]" />
             </div>
             {[...Array(8)].map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-16 rounded" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="h-3 w-40" />
-                <Skeleton className="h-3 w-32" />
-                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-4 w-[8%] rounded" />
+                <Skeleton className="h-3 w-[30%]" />
+                <Skeleton className="h-5 w-[12%] rounded-full" />
+                <Skeleton className="h-5 w-[12%] rounded-full" />
+                <Skeleton className="h-3 w-[20%]" />
+                <Skeleton className="h-3 w-[15%]" />
               </div>
             ))}
           </div>
@@ -287,5 +293,6 @@ export function Tickets() {
       )}
       </div>
     </div>
+    </TooltipProvider>
   );
 }

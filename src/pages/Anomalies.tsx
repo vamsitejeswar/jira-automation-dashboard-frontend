@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Info, ChevronUp, ChevronDown, AlertCircle, Activity, Zap } from "lucide-react";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { PresetPicker } from "@/components/ui/preset-picker";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
@@ -33,11 +35,12 @@ function getPresetDates(preset: Preset): { from: string; to: string } {
 }
 
 const PRESETS: { key: Preset; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "3d",    label: "3 days" },
-  { key: "7d",    label: "7 days" },
-  { key: "14d",   label: "14 days" },
-  { key: "30d",   label: "30 days" },
+  { key: "today",  label: "Today" },
+  { key: "3d",     label: "3 days" },
+  { key: "7d",     label: "7 days" },
+  { key: "14d",    label: "14 days" },
+  { key: "30d",    label: "30 days" },
+  { key: "custom", label: "Custom" },
 ];
 
 const SEVERITY_BORDER: Record<string, string> = {
@@ -73,9 +76,9 @@ function AnomaliesSkeleton() {
         <div className="space-y-3 px-5 pb-5">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-4">
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-5 w-[15%] rounded-full" />
+              <Skeleton className="h-4 w-[55%]" />
+              <Skeleton className="h-4 w-[20%]" />
             </div>
           ))}
         </div>
@@ -170,31 +173,7 @@ export function Anomalies() {
         {/* Filter bar */}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {/* Preset quick picks */}
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPreset(p.key)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
-                  preset === p.key
-                    ? "bg-white text-blue-600 shadow-sm border border-slate-200"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-            <button
-              onClick={() => setPreset("custom")}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
-                preset === "custom"
-                  ? "bg-white text-blue-600 shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Custom
-            </button>
-          </div>
+          <PresetPicker options={PRESETS} value={preset} onChange={setPreset} />
 
           {/* Date range inputs */}
           <DateRangePicker
@@ -206,19 +185,8 @@ export function Anomalies() {
           />
 
           {/* Include normal toggle */}
-          <label className="ml-auto flex items-center gap-2 cursor-pointer group">
-            <div
-              onClick={() => setIncludeNormal((v) => !v)}
-              className={`relative h-5 w-9 rounded-full transition-colors cursor-pointer ${
-                includeNormal ? "bg-blue-600" : "bg-slate-200"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  includeNormal ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </div>
+          <label className="ml-auto flex items-center gap-2 cursor-pointer">
+            <ToggleSwitch size="sm" on={includeNormal} onChange={setIncludeNormal} />
             <span className="text-xs text-slate-600 font-medium">Include normal events</span>
           </label>
         </div>

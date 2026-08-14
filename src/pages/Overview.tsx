@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { PresetPicker } from "@/components/ui/preset-picker";
 import { getKpis, getAnomalies, getScheduledJobs } from "@/api";
 import { formatISTShort } from "@/lib/utils";
 
@@ -141,14 +142,11 @@ export function Overview() {
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-            {(["today", "7d", "30d"] as Preset[]).map((p) => (
-              <button key={p} onClick={() => setPreset(p)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${preset === p ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
-                {PRESET_LABELS[p]}
-              </button>
-            ))}
-          </div>
+          <PresetPicker
+            options={(["today", "7d", "30d"] as Preset[]).map((p) => ({ key: p, label: PRESET_LABELS[p] }))}
+            value={preset as Preset}
+            onChange={setPreset}
+          />
           <DateRangePicker from={dates.from} to={dates.to}
             onRangeChange={(f, t) => { setCustomFrom(f); setCustomTo(t); setPreset("custom"); }}
             placeholder="Pick date range" className="h-9 text-sm" />

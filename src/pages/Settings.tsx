@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardDrive, UserX, Laptop } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { Button } from "@/components/ui/button";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { getToggles, updateToggle } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { Toggle, ToggleName } from "@/api";
@@ -75,34 +77,6 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
   },
 ];
 
-function ToggleSwitch({
-  on,
-  disabled,
-  onChange,
-}: {
-  on: boolean;
-  disabled?: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      role="switch"
-      aria-checked={on}
-      disabled={disabled}
-      onClick={() => onChange(!on)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
-        on ? "bg-blue-600" : "bg-slate-200"
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform ${
-          on ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-}
-
 function ToggleRow({
   toggle,
   onToggle,
@@ -167,22 +141,26 @@ function ToggleRow({
             <span className="text-xs text-red-700 font-medium flex-1">
               Disable the master switch? This stops all automation immediately.
             </span>
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               disabled={isPending}
               onClick={() => {
                 onToggle(toggle.name, false);
                 setConfirmOpen(false);
               }}
-              className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="h-7 text-xs"
             >
               Disable
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setConfirmOpen(false)}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              className="h-7 text-xs"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -199,7 +177,7 @@ function ToggleRow({
 
 function SettingsSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-5 max-w-3xl">
+    <div className="px-8 py-6 space-y-6 max-w-3xl">
       {SECTIONS.map(({ title, names }) => (
         <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 space-y-1.5">
@@ -268,11 +246,11 @@ export function Settings() {
       ) : isError ? (
         <div className="px-8 py-6"><ErrorState error={error as Error} /></div>
       ) : (
-      <div className="px-8 py-6 space-y-5 max-w-3xl">
+      <div className="px-8 py-6 space-y-6 max-w-3xl">
         {SECTIONS.map(({ title, subtitle, names }) => (
           <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden">
             {/* Section header */}
-            <div className="px-5 py-4 border-b bg-slate-50">
+            <div className="px-5 py-4">
               <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
               <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
             </div>

@@ -32,7 +32,7 @@ const SEVERITY_OPTIONS = [
 const SEVERITY_STRIPE: Record<string, string> = {
   ERROR:   "border-l-red-500 bg-red-50/50",
   WARNING: "border-l-amber-400 bg-amber-50/40",
-  INFO:    "",
+  INFO:    "border-l-transparent",
 };
 
 export function AuditLog() {
@@ -118,22 +118,25 @@ export function AuditLog() {
 
       {/* Content */}
       <div className="px-8 py-6 space-y-6">
-        <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+        <div className={`rounded-xl bg-white overflow-hidden shadow-sm ${isLoading ? "" : "border"}`}>
           {isLoading ? (
             <div className="space-y-3.5 px-5 py-3.5">
               <div className="flex items-center gap-4">
-                {["w-28", "w-16", "w-20", "w-36", "w-16", "w-40"].map((w, i) => (
-                  <Skeleton key={i} className={`h-3 ${w}`} />
-                ))}
+                <Skeleton className="h-3 w-[14%]" />
+                <Skeleton className="h-3 w-[10%]" />
+                <Skeleton className="h-3 w-[12%]" />
+                <Skeleton className="h-3 w-[20%]" />
+                <Skeleton className="h-3 w-[10%]" />
+                <Skeleton className="h-3 w-[28%]" />
               </div>
               {[...Array(10)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-3 w-28" />
-                  <Skeleton className="h-5 w-14 rounded-full" />
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-3 w-36" />
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="flex-1 h-3" />
+                  <Skeleton className="h-3 w-[14%]" />
+                  <Skeleton className="h-5 w-[10%] rounded-full" />
+                  <Skeleton className="h-5 w-[12%] rounded-full" />
+                  <Skeleton className="h-3 w-[20%]" />
+                  <Skeleton className="h-3 w-[10%]" />
+                  <Skeleton className="h-3 w-[28%]" />
                 </div>
               ))}
             </div>
@@ -173,12 +176,12 @@ export function AuditLog() {
                       <td className="px-5 py-3">
                         <FlowBadge flow={e.flow} />
                       </td>
-                      <td className="px-5 py-3 text-xs font-mono text-slate-700">{e.outcome}</td>
+                      <td className="px-5 py-3 text-xs font-mono text-slate-700 whitespace-nowrap">{e.outcome}</td>
                       <td className="px-5 py-3">
                         {e.issueKey ? (
                           <Link
                             to={`/tickets/${e.issueKey}`}
-                            className="font-mono text-xs font-bold text-blue-600 hover:underline"
+                            className="font-mono text-xs font-bold text-blue-600 hover:underline whitespace-nowrap"
                           >
                             {e.issueKey}
                           </Link>

@@ -19,6 +19,9 @@ import {
   UserX,
   ClipboardList,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getEmployeeProgress } from "@/api";
 import type { EmployeeProgress, FlowStep } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -278,21 +281,18 @@ export function EmployeeSearch() {
         <div className="mt-5 flex gap-3 max-w-2xl">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
+            <Input
               type="email"
               placeholder="employee@verse.in"
-              className="w-full h-11 rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full h-11 pl-10 text-sm"
               value={inputVal}
               onChange={e => setInputVal(e.target.value)}
               onKeyDown={e => e.key === "Enter" && submit(inputVal)}
             />
           </div>
-          <button
-            onClick={() => submit(inputVal)}
-            className="h-11 px-6 rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
-          >
+          <Button onClick={() => submit(inputVal)} className="h-11 px-6">
             Search
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -300,10 +300,31 @@ export function EmployeeSearch() {
       <div className="px-8 py-6">
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-24">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-              <p className="text-sm text-slate-500">Looking up employee records…</p>
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 rounded-xl border bg-white px-6 py-4 shadow-sm">
+              <Skeleton className="h-12 w-12 rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-64" />
+              </div>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="rounded-xl border bg-white overflow-hidden shadow-sm">
+                  <div className="px-5 pt-4 pb-3 flex items-center gap-3">
+                    <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <div className="px-5 pb-5 space-y-2">
+                    {[...Array(3)].map((_, j) => (
+                      <Skeleton key={j} className="h-14 w-full rounded-lg" />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

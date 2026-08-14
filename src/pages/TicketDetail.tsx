@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Badge, OutcomeBadge, SeverityBadge, FlowBadge } from "@/components/ui/badge";
+import { Badge, OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/ui/badge";
 import { getTicketDetail, getAnomalies } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { AuditEvent } from "@/api";
@@ -198,7 +198,9 @@ export function TicketDetail() {
               <div className="flex items-center gap-2 flex-wrap">
                 <FlowBadge flow={t!.flow} />
                 <OutcomeBadge outcome={t!.currentStatus} />
-                {t!.hasError && <Badge variant="error">Has Error</Badge>}
+                {t!.hasError && !isSelfEvidentError(t!.currentStatus) && (
+                  <Badge variant="error">Has Error</Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700">
                 <div>

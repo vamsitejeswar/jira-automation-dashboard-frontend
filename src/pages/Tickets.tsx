@@ -16,13 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
-import { OutcomeBadge, FlowBadge, Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { OutcomeBadge, FlowBadge, Badge, isSelfEvidentError } from "@/components/ui/badge";
 import { getTickets } from "@/api";
 import type { TicketFilters } from "@/api";
 import type { TicketSummary } from "@/api";
 import { formatIST } from "@/lib/utils";
 import { exportToExcel, ticketsToExcelRows } from "@/lib/export";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const FLOW_OPTIONS = [
   { value: "gws_mailbox", label: "Mailbox" },
@@ -73,7 +73,9 @@ const columns = [
     cell: (info) => (
       <div className="flex items-center gap-1.5">
         <OutcomeBadge outcome={info.getValue()} />
-        {info.row.original.hasError && <Badge variant="error">Error</Badge>}
+        {info.row.original.hasError && !isSelfEvidentError(info.getValue()) && (
+          <Badge variant="error">Error</Badge>
+        )}
       </div>
     ),
   }),
@@ -86,7 +88,7 @@ const columns = [
   col.accessor("updatedAt", {
     header: "Last Updated",
     cell: (info) => (
-      <span className="tabular-nums text-xs text-slate-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
+      <span className="tabular-nums text-xs text-slate-600 whitespace-nowrap">{formatIST(info.getValue())}</span>
     ),
   }),
 ];
@@ -189,21 +191,18 @@ export function Tickets() {
         {isLoading ? (
           <div className="space-y-3.5 px-4 py-3">
             <div className="flex items-center gap-4">
-              <Skeleton className="h-3 w-[8%]" />
-              <Skeleton className="h-3 w-[30%]" />
-              <Skeleton className="h-3 w-[12%]" />
-              <Skeleton className="h-3 w-[12%]" />
-              <Skeleton className="h-3 w-[20%]" />
-              <Skeleton className="h-3 w-[15%]" />
+              {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
+                <Skeleton key={i} className={`h-3 ${w}`} />
+              ))}
             </div>
             {[...Array(8)].map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-[8%] rounded" />
-                <Skeleton className="h-3 w-[30%]" />
-                <Skeleton className="h-5 w-[12%] rounded-full" />
-                <Skeleton className="h-5 w-[12%] rounded-full" />
-                <Skeleton className="h-3 w-[20%]" />
-                <Skeleton className="h-3 w-[15%]" />
+                <Skeleton className="h-4 w-16 rounded" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-3 w-28" />
               </div>
             ))}
           </div>

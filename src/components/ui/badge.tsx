@@ -53,7 +53,25 @@ const OUTCOME_MAP: Record<string, VariantProps<typeof badgeVariants>["variant"]>
   data_transfer_disabled: "orange",
   automation_disabled: "orange",
   ignored: "muted",
+  // Real, actionable gaps -- the backend remaps a bare "ignored" + reason
+  // (e.g. no Manager set) to one of these instead of the vague original,
+  // so the status itself says what's wrong instead of needing a second,
+  // redundant "Error" badge next to it.
+  missing_manager: "error",
+  missing_employee_email: "error",
 };
+
+// Statuses that already read as a real problem on their own -- a ticket
+// whose current status is one of these doesn't need a separate "Error"
+// badge bolted on too; that was showing "ignored" + "Error" side by side,
+// which just reads as contradictory. hasError is still worth flagging
+// separately for a ticket that LOOKS fine now (e.g. "succeeded") but had a
+// real failure earlier in its history.
+const SELF_EVIDENT_ERROR_OUTCOMES = new Set(Object.keys(OUTCOME_MAP).filter((k) => OUTCOME_MAP[k] === "error"));
+
+export function isSelfEvidentError(outcome: string): boolean {
+  return SELF_EVIDENT_ERROR_OUTCOMES.has(outcome);
+}
 
 export function OutcomeBadge({ outcome }: { outcome: string }) {
   const variant = OUTCOME_MAP[outcome] ?? "info";

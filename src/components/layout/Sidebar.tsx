@@ -9,6 +9,7 @@ import {
   UserSearch,
   MailCheck,
   Settings,
+  CalendarClock,
 } from "lucide-react";
 
 const NAV = [
@@ -16,6 +17,7 @@ const NAV = [
   { to: "/tickets", icon: Ticket, label: "Tickets" },
   { to: "/employees", icon: UserSearch, label: "Employee Search" },
   { to: "/approvals", icon: MailCheck, label: "Approvals" },
+  { to: "/schedules", icon: CalendarClock, label: "Schedules" },
   { to: "/anomalies", icon: AlertTriangle, label: "Anomalies" },
   { to: "/audit-log", icon: ScrollText, label: "Audit Log" },
   { to: "/settings", icon: Settings, label: "Settings" },

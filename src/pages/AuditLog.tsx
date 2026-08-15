@@ -2,13 +2,15 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
-import { Select } from "@/components/ui/select";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { format, parse, isValid } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { SelectField } from "@/components/app/select-field";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
-import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
+import { SeverityBadge, FlowBadge } from "@/components/app/badges";
 import { getAuditLog } from "@/api";
 import type { AuditLogFilters } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -18,6 +20,7 @@ const FLOW_OPTIONS = [
   { value: "gws_mailbox",           label: "Mailbox" },
   { value: "akamai_access",         label: "Akamai" },
   { value: "drive_transfer",        label: "Drive Transfer" },
+  { value: "gws_suspend",           label: "Account Suspension" },
   { value: "scheduled_credentials", label: "Scheduled Credentials" },
   { value: "data_transfer",         label: "Data Transfer" },
   { value: "toggle_change",         label: "Toggle Change" },
@@ -34,6 +37,12 @@ const SEVERITY_STRIPE: Record<string, string> = {
   WARNING: "border-l-amber-400 bg-amber-50/40",
   INFO:    "border-l-transparent",
 };
+
+function parseYMD(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = parse(s, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : undefined;
+}
 
 export function AuditLog() {
   const [filters, setFilters] = useState<AuditLogFilters>({ page: 1, pageSize: 50 });
@@ -79,26 +88,30 @@ export function AuditLog() {
           <div className="flex items-center gap-1.5 text-slate-400">
             <Filter className="h-4 w-4" />
           </div>
-          <Select
+          <SelectField
             options={FLOW_OPTIONS}
             placeholder="All flows"
             value={filters.flow ?? ""}
             onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
             className="w-48"
           />
-          <Select
+          <SelectField
             options={SEVERITY_OPTIONS}
             placeholder="Any severity"
             value={filters.severity ?? ""}
             onValueChange={(v) => setFilters((f) => ({ ...f, severity: v || undefined, page: 1 }))}
             className="w-36"
           />
-          <DateRangePicker
-            from={filters.from ?? ""}
-            to={filters.to ?? ""}
-            onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
-            placeholder="Pick date range"
-            className="h-9 text-sm"
+          <DatePickerWithRange
+            value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
+            onChange={(range: DateRange | undefined) =>
+              setFilters((prev) => ({
+                ...prev,
+                from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+                to:   range?.to   ? format(range.to,   "yyyy-MM-dd") : undefined,
+                page: 1,
+              }))
+            }
           />
           {(filters.flow || filters.severity || filters.from || filters.to) && (
             <button
@@ -117,7 +130,7 @@ export function AuditLog() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-6 space-y-6">
+      <div className="px-4 py-4 space-y-4">
         <div className={`rounded-xl bg-white overflow-hidden shadow-sm ${isLoading ? "" : "border"}`}>
           {isLoading ? (
             <div className="space-y-3.5 px-5 py-3.5">

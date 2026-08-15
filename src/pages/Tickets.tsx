@@ -8,30 +8,40 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Search, Download } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { SelectField } from "@/components/app/select-field";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
-import { OutcomeBadge, FlowBadge, Badge, isSelfEvidentError } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { OutcomeBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { getTickets } from "@/api";
 import type { TicketFilters } from "@/api";
 import type { TicketSummary } from "@/api";
 import { formatIST } from "@/lib/utils";
 import { exportToExcel, ticketsToExcelRows } from "@/lib/export";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 const FLOW_OPTIONS = [
   { value: "gws_mailbox", label: "Mailbox" },
   { value: "akamai_access", label: "Akamai" },
   { value: "drive_transfer", label: "Drive Transfer" },
+  { value: "gws_suspend", label: "Account Suspension" },
   { value: "scheduled_credentials", label: "Scheduled Credentials" },
   { value: "data_transfer", label: "Data Transfer" },
   { value: "toggle_change", label: "Toggle Change" },
 ];
+
+function parseYMD(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = parse(s, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : undefined;
+}
 
 const col = createColumnHelper<TicketSummary>();
 
@@ -53,14 +63,18 @@ const columns = [
       const value = info.getValue();
       if (!value) return <span className="text-xs text-slate-400">—</span>;
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="text-xs text-slate-700 line-clamp-1 max-w-64 cursor-default">
-              {value}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{value}</TooltipContent>
-        </Tooltip>
+        <HoverCard>
+          <HoverCardTrigger
+            delay={200}
+            closeDelay={100}
+            render={
+              <span className="text-xs text-slate-700 line-clamp-1 max-w-64 cursor-default">
+                {value}
+              </span>
+            }
+          />
+          <HoverCardContent className="w-auto max-w-xs text-xs">{value}</HoverCardContent>
+        </HoverCard>
       );
     },
   }),
@@ -74,7 +88,7 @@ const columns = [
       <div className="flex items-center gap-1.5">
         <OutcomeBadge outcome={info.getValue()} />
         {info.row.original.hasError && !isSelfEvidentError(info.getValue()) && (
-          <Badge variant="error">Error</Badge>
+          <Badge variant="destructive">Error</Badge>
         )}
       </div>
     ),
@@ -123,7 +137,6 @@ export function Tickets() {
   const currentPage = filters.page ?? 1;
 
   return (
-    <TooltipProvider delayDuration={200}>
     <div className="min-h-full bg-slate-50">
       {/* Header */}
       <div className="border-b bg-white px-8 py-6">
@@ -158,19 +171,23 @@ export function Tickets() {
               onKeyDown={(e) => e.key === "Enter" && applySearch()}
             />
           </div>
-          <Select
+          <SelectField
             options={FLOW_OPTIONS}
             placeholder="All flows"
             value={filters.flow ?? ""}
             onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
             className="w-44"
           />
-          <DateRangePicker
-            from={filters.from ?? ""}
-            to={filters.to ?? ""}
-            onRangeChange={(f, t) => setFilters((prev) => ({ ...prev, from: f || undefined, to: t || undefined, page: 1 }))}
-            placeholder="Pick date range"
-            className="h-9 text-xs"
+          <DatePickerWithRange
+            value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
+            onChange={(range: DateRange | undefined) =>
+              setFilters((prev) => ({
+                ...prev,
+                from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+                to:   range?.to   ? format(range.to,   "yyyy-MM-dd") : undefined,
+                page: 1,
+              }))
+            }
           />
           <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
           <Button
@@ -184,7 +201,7 @@ export function Tickets() {
         </div>
       </div>
 
-      <div className="px-8 py-6 space-y-6">
+      <div className="px-4 py-4 space-y-4">
       {/* Table */}
       <Card className="overflow-hidden">
         {isLoading ? (
@@ -291,6 +308,5 @@ export function Tickets() {
       )}
       </div>
     </div>
-    </TooltipProvider>
   );
 }

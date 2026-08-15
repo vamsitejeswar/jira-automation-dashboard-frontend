@@ -4,7 +4,7 @@ import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardD
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { Switch } from "@/components/ui/switch";
 import { getToggles, updateToggle } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { Toggle, ToggleName } from "@/api";
@@ -180,7 +180,7 @@ function ToggleRow({
       {/* Toggle switch */}
       {!confirmOpen && (
         <div className="flex-shrink-0 mt-0.5">
-          <ToggleSwitch on={toggle.value} disabled={isPending} onChange={handleChange} />
+          <Switch checked={toggle.value} disabled={isPending} onCheckedChange={handleChange} />
         </div>
       )}
     </div>
@@ -258,7 +258,7 @@ export function Settings() {
       ) : isError ? (
         <div className="px-8 py-6"><ErrorState error={error as Error} /></div>
       ) : (
-      <div className="px-8 py-6 space-y-6 max-w-3xl">
+      <div className="px-4 py-4 space-y-4 max-w-3xl">
         {SECTIONS.map(({ title, subtitle, names }) => (
           <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden">
             {/* Section header */}

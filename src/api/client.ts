@@ -7,20 +7,24 @@ import {
   AnomalySummarySchema,
   ScheduledJobSchema,
   ScheduledJobsResponseSchema,
+  ScheduledJobLogResponseSchema,
   AuditLogResponseSchema,
   EmployeeSearchResponseSchema,
   EmployeeSearchSuggestionsSchema,
   ApprovalsResponseSchema,
+  GwsUserSearchResponseSchema,
   type TicketsResponse,
   type TicketDetail,
   type Kpis,
   type Toggle,
   type AnomalySummary,
   type ScheduledJob,
+  type ScheduledJobLogResponse,
   type AuditLogResponse,
   type EmployeeSearchResponse,
   type EmployeeSearchSuggestions,
   type ApprovalsResponse,
+  type GwsUserSearchResponse,
 } from "./types";
 
 // Shared-secret token the backend's /api/admin/* routes require as
@@ -136,6 +140,11 @@ export function runScheduledJob(name: string): Promise<{ job: ScheduledJob }> {
   });
 }
 
+export function getScheduledJobLog(name: string, page = 1, pageSize = 50): Promise<ScheduledJobLogResponse> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  return fetchJSON(ScheduledJobLogResponseSchema, `/api/admin/scheduled-jobs/${encodeURIComponent(name)}/log?${params}`);
+}
+
 export function getEmployeeProgress(query: string): Promise<EmployeeSearchResponse> {
   const params = new URLSearchParams({ q: query });
   return fetchJSON(EmployeeSearchResponseSchema, `/api/admin/employees?${params}`);
@@ -150,6 +159,29 @@ export function getApprovals(status?: string): Promise<ApprovalsResponse> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
   return fetchJSON(ApprovalsResponseSchema, `/api/admin/approvals?${params}`);
+}
+
+export interface ApprovalActionBody { cloneFromEmail?: string; comment?: string }
+
+export function approveMailApproval(issueKey: string, body: ApprovalActionBody = {}): Promise<{ status: string; issueKey: string }> {
+  return fetchJSON(
+    z.object({ status: z.string(), issueKey: z.string() }),
+    `/api/admin/approvals/${encodeURIComponent(issueKey)}/approve`,
+    { method: "POST", body: JSON.stringify(body) }
+  );
+}
+
+export function rejectMailApproval(issueKey: string, body: ApprovalActionBody = {}): Promise<{ status: string; issueKey: string }> {
+  return fetchJSON(
+    z.object({ status: z.string(), issueKey: z.string() }),
+    `/api/admin/approvals/${encodeURIComponent(issueKey)}/reject`,
+    { method: "POST", body: JSON.stringify(body) }
+  );
+}
+
+export function searchGwsUsers(query: string): Promise<GwsUserSearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  return fetchJSON(GwsUserSearchResponseSchema, `/api/admin/gws/search-users?${params}`);
 }
 
 export interface AuditLogFilters {

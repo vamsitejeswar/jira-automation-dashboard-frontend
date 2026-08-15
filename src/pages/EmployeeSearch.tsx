@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search,
@@ -18,6 +18,7 @@ import {
   Database,
   UserX,
   ClipboardList,
+  Lock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
   gws_mailbox:           { label: "Google Workspace Mailbox", icon: MailOpen,   color: "#2563eb" },
   akamai_access:         { label: "Akamai / ZScaler Access",  icon: ShieldCheck, color: "#7c3aed" },
   drive_transfer:        { label: "Google Drive Transfer",     icon: HardDrive,  color: "#d97706" },
+  gws_suspend:           { label: "Account Suspension",         icon: Lock,       color: "#ea580c" },
   scheduled_credentials: { label: "Send Login Credentials",   icon: Key,        color: "#16a34a" },
   data_transfer:         { label: "Data Transfer",            icon: Database,    color: "#0891b2" },
   ad_m365_disable:       { label: "AD / M365 Disable",         icon: UserX,       color: "#b91c1c" },
@@ -203,11 +205,13 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
           </div>
           <div className="min-w-0 flex-1">
             <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-base font-bold text-slate-900 truncate cursor-default">
-                  {record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}
-                </p>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <p className="text-base font-bold text-slate-900 truncate cursor-default">
+                    {record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}
+                  </p>
+                }
+              />
               <TooltipContent>{record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}</TooltipContent>
             </Tooltip>
             <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -277,12 +281,26 @@ export function EmployeeSearch() {
   // to update state.
   const requestId = useRef(0);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const { data, isLoading } = useQuery({
     queryKey: ["employee", submittedQuery],
     queryFn: () => getEmployeeProgress(submittedQuery),
     enabled: submittedQuery.length > 2,
   });
+
+  // Deep-link support -- e.g. the Overview page's global search sends an
+  // admin here with ?q=<email> already resolved, so the result shows up
+  // immediately instead of making them retype it.
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && q.trim()) {
+      setInputVal(q);
+      setSubmittedQuery(q.trim());
+    }
+    // Only meant to run once, off the URL this page was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Live-as-you-type dropdown -- debounced so a fast typist doesn't fire a
   // request per keystroke; cheap on the backend since it skips the audit
@@ -340,7 +358,7 @@ export function EmployeeSearch() {
   const showEmailPerCard = (data?.resolvedEmails.length ?? 0) > 1;
 
   return (
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delay={200}>
     <div className="min-h-full bg-slate-50">
       {/* Page header */}
       <div className="border-b bg-white px-8 py-6">
@@ -412,7 +430,7 @@ export function EmployeeSearch() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-6">
+      <div className="px-4 py-4">
         {/* Loading */}
         {isLoading && (
           <div className="space-y-6">

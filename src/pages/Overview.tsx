@@ -1,25 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { format, parse, isValid } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import {
   Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
-  ArrowUpRight,
+  ArrowUpRight, Search,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { SeverityBadge, FlowBadge } from "@/components/app/badges";
 import { TrendChart } from "@/components/charts/TrendChart";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { PresetPicker } from "@/components/ui/preset-picker";
-import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob } from "@/api";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { PresetPicker } from "@/components/app/preset-picker";
+import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob, getEmployeeSearchSuggestions } from "@/api";
+import type { EmployeeSearchResult } from "@/api";
 import { formatISTShort, describeCron } from "@/lib/utils";
+
+const GLOBAL_SEARCH_DEBOUNCE_MS = 250;
 
 type Preset = "today" | "7d" | "30d";
 const PRESET_LABELS: Record<Preset, string> = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days" };
 
 function fmt(d: Date) { return d.toISOString().split("T")[0]; }
+function parseYMD(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = parse(s, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : undefined;
+}
 function getPresetDates(p: Preset) {
   const today = new Date(), todayStr = fmt(today);
   const ago = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return fmt(d); };
@@ -39,7 +51,7 @@ const KPI_CONFIG = [
 /* ── Skeletons ──────────────────────────────────────────────── */
 function OverviewSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-6">
+    <div className="px-4 py-4 space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden flex flex-col">
@@ -134,6 +146,93 @@ function JobDot({ state }: { state: string }) {
 }
 
 /* ── Page ───────────────────────────────────────────────────── */
+// Global search -- same live typeahead engine as the Employee Search page
+// (email / ticket key / name via live Jira search), just reachable straight
+// from the dashboard's landing page. Picking a result jumps to that
+// employee's progress view (Employee Search, pre-filled via ?q=) or, if no
+// employee resolved from the matched ticket, straight to the ticket itself.
+function GlobalSearchBox() {
+  const [value, setValue] = useState("");
+  const [suggestions, setSuggestions] = useState<EmployeeSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const requestId = useRef(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (value.trim().length <= 2) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const thisRequest = ++requestId.current;
+      setLoading(true);
+      getEmployeeSearchSuggestions(value.trim())
+        .then((res) => {
+          if (requestId.current !== thisRequest) return;
+          setSuggestions(res.results);
+        })
+        .catch(() => {
+          if (requestId.current !== thisRequest) return;
+          setSuggestions([]);
+        })
+        .finally(() => {
+          if (requestId.current !== thisRequest) return;
+          setLoading(false);
+        });
+    }, GLOBAL_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  function goTo(result: EmployeeSearchResult) {
+    setShowSuggestions(false);
+    if (result.employeeEmail) {
+      navigate(`/employees?q=${encodeURIComponent(result.employeeEmail)}`);
+    } else if (result.issueKey) {
+      navigate(`/tickets/${result.issueKey}`);
+    }
+  }
+
+  return (
+    <div className="relative w-72">
+      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+      <Input
+        type="text"
+        placeholder="Search employee, email, or ticket..."
+        className="h-9 pl-9 pr-8 text-xs"
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setShowSuggestions(true); }}
+        onFocus={() => setShowSuggestions(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && suggestions.length > 0) goTo(suggestions[0]);
+        }}
+        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+      />
+      {loading && <Spinner className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />}
+      {showSuggestions && suggestions.length > 0 && (
+        <ul
+          className="absolute z-10 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {suggestions.map((s, i) => (
+            <li
+              key={i}
+              onClick={() => goTo(s)}
+              className="px-3.5 py-2 cursor-pointer hover:bg-slate-50 border-b last:border-b-0"
+            >
+              <p className="text-xs font-semibold text-slate-700 truncate">{s.title ?? s.issueKey}</p>
+              <p className="text-[11px] text-slate-400 truncate">
+                {s.employeeEmail ?? "No employee resolved"} · {s.issueKey}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function Overview() {
   const [preset, setPreset]         = useState<Preset | "custom">("7d");
   const [customFrom, setCustomFrom] = useState("");
@@ -154,17 +253,27 @@ export function Overview() {
     <div className="min-h-full bg-slate-50">
       {/* Header — always visible */}
       <div className="border-b bg-white px-8 py-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+            <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
+          </div>
+          <GlobalSearchBox />
+        </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <PresetPicker
             options={(["today", "7d", "30d"] as Preset[]).map((p) => ({ key: p, label: PRESET_LABELS[p] }))}
             value={preset as Preset}
             onChange={setPreset}
           />
-          <DateRangePicker from={dates.from} to={dates.to}
-            onRangeChange={(f, t) => { setCustomFrom(f); setCustomTo(t); setPreset("custom"); }}
-            placeholder="Pick date range" className="h-9 text-sm" />
+          <DatePickerWithRange
+            value={{ from: parseYMD(dates.from), to: parseYMD(dates.to) }}
+            onChange={(range: DateRange | undefined) => {
+              setCustomFrom(range?.from ? format(range.from, "yyyy-MM-dd") : "");
+              setCustomTo(range?.to ? format(range.to, "yyyy-MM-dd") : "");
+              setPreset("custom");
+            }}
+          />
         </div>
       </div>
 
@@ -174,7 +283,7 @@ export function Overview() {
       ) : kpis.isError ? (
         <div className="px-8 py-6"><ErrorState error={kpis.error as Error} onRetry={kpis.refetch} /></div>
       ) : (
-        <div className="px-8 py-6 space-y-6">
+        <div className="px-4 py-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {KPI_CONFIG.map((c) => <KpiTile key={c.dataKey} label={c.label} icon={c.icon} accent={c.accent} lightBg={c.lightBg} trend={c.trend} sub={c.sub} viewTo={c.viewTo} value={kpis.data![c.dataKey]} />)}
           </div>
@@ -235,7 +344,7 @@ export function Overview() {
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </Link>
                       )}
-                      <span className="shrink-0 text-xs text-slate-400 tabular-nums">{formatISTShort(a.timestamp)}</span>
+                      <span className="shrink-0 text-xs text-slate-600 tabular-nums">{formatISTShort(a.timestamp)}</span>
                       
                     </li>
                   ))}

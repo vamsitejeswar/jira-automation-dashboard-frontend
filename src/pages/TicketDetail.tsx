@@ -1,11 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft,
+  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Badge, OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { getTicketDetail, getAnomalies } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { AuditEvent } from "@/api";
@@ -14,6 +15,7 @@ const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
   gws_mailbox:           { icon: MailOpen,    color: "#0284c7" },
   akamai_access:         { icon: ShieldCheck, color: "#7c3aed" },
   drive_transfer:        { icon: HardDrive,   color: "#d97706" },
+  gws_suspend:           { icon: Lock,        color: "#ea580c" },
   scheduled_credentials: { icon: Key,         color: "#16a34a" },
   data_transfer:         { icon: Database,    color: "#ea580c" },
   toggle_change:         { icon: ToggleLeft,  color: "#64748b" },
@@ -127,7 +129,7 @@ function statusStyle(status: string) {
 
 function TicketDetailSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-6">
+    <div className="px-4 py-4 space-y-4">
       <div className="rounded-xl bg-white shadow-sm p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3 flex-1">
@@ -207,11 +209,11 @@ export function TicketDetail() {
           <ErrorState error={ticket.error as Error} onRetry={ticket.refetch} />
         </div>
       ) : (
-      <div className="px-8 py-6 space-y-6">
+      <div className="px-4 py-4 space-y-4">
       {/* Header card */}
       <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
         <div className="h-1.5" style={{ background: FLOW_META[t!.flow]?.color ?? "#64748b" }} />
-        <div className="p-6 flex items-start justify-between gap-4">
+        <div className="p-6 flex items-start justify-between gap-6">
           <div className="flex items-start gap-4">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0"
@@ -237,7 +239,7 @@ export function TicketDetail() {
                 <FlowBadge flow={t!.flow} />
                 <OutcomeBadge outcome={t!.currentStatus} />
                 {t!.hasError && !isSelfEvidentError(t!.currentStatus) && (
-                  <Badge variant="error">Has Error</Badge>
+                  <Badge variant="destructive">Has Error</Badge>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700">

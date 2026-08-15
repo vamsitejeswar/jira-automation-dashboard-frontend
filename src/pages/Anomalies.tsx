@@ -2,19 +2,27 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Info, ChevronUp, ChevronDown, AlertCircle, Activity, Zap } from "lucide-react";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { PresetPicker } from "@/components/ui/preset-picker";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { format, parse, isValid } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { PresetPicker } from "@/components/app/preset-picker";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
-import { SeverityBadge, FlowBadge } from "@/components/ui/badge";
+import { SeverityBadge, FlowBadge } from "@/components/app/badges";
 import { getAnomalies } from "@/api";
 import type { AnomalyFilters } from "@/api";
 import { formatIST } from "@/lib/utils";
 
 type Preset = "today" | "3d" | "7d" | "14d" | "30d" | "custom";
+
+function parseYMD(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = parse(s, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : undefined;
+}
 
 function getPresetDates(preset: Preset): { from: string; to: string } {
   const today = new Date();
@@ -139,6 +147,12 @@ export function Anomalies() {
   function updateCustomRange(f: string, t: string) {
     setCustomFrom(f); setCustomTo(t); setPreset("custom"); setPage(1);
   }
+  function updateCustomRangeFromPicker(range: DateRange | undefined) {
+    updateCustomRange(
+      range?.from ? format(range.from, "yyyy-MM-dd") : "",
+      range?.to   ? format(range.to,   "yyyy-MM-dd") : ""
+    );
+  }
 
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -191,17 +205,17 @@ export function Anomalies() {
           <PresetPicker options={PRESETS} value={preset} onChange={updatePreset} />
 
           {/* Date range inputs */}
-          <DateRangePicker
-            from={preset === "custom" ? customFrom : dates.from}
-            to={preset === "custom" ? customTo : dates.to}
-            onRangeChange={updateCustomRange}
-            placeholder="Pick date range"
-            className="h-9 text-xs"
+          <DatePickerWithRange
+            value={{
+              from: parseYMD(preset === "custom" ? customFrom : dates.from),
+              to:   parseYMD(preset === "custom" ? customTo   : dates.to),
+            }}
+            onChange={updateCustomRangeFromPicker}
           />
 
           {/* Include normal toggle */}
           <label className="ml-auto flex items-center gap-2 cursor-pointer">
-            <ToggleSwitch size="sm" on={includeNormal} onChange={updateIncludeNormal} />
+            <Switch checked={includeNormal} onCheckedChange={updateIncludeNormal} />
             <span className="text-xs text-slate-600 font-medium">Include normal events</span>
           </label>
         </div>
@@ -215,7 +229,7 @@ export function Anomalies() {
           <ErrorState error={error as Error} onRetry={refetch} />
         </div>
       ) : (
-        <div className="px-8 py-6 space-y-6">
+        <div className="px-4 py-4 space-y-4">
           {/* Stats bar */}
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">

@@ -4,6 +4,7 @@ export const FlowSchema = z.enum([
   "gws_mailbox",
   "akamai_access",
   "drive_transfer",
+  "gws_suspend",
   "scheduled_credentials",
   "data_transfer",
   "toggle_change",
@@ -89,7 +90,7 @@ export const KpisSchema = z.object({
 export type Kpis = z.infer<typeof KpisSchema>;
 
 // ── Mail Approvals ─────────────────────────────────────────────────────────────
-export const ApprovalStatusSchema = z.enum(["pending", "approved", "ignored", "no_response", "failed"]);
+export const ApprovalStatusSchema = z.enum(["pending", "approved", "ignored", "no_response", "failed", "untracked"]);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
 
 export const ApprovalSchema = z.object({
@@ -108,6 +109,15 @@ export const ApprovalsResponseSchema = z.object({
   results: z.array(ApprovalSchema),
 });
 export type ApprovalsResponse = z.infer<typeof ApprovalsResponseSchema>;
+
+// Same live search-select the manager's own Akamai setup email/form uses --
+// an admin-authenticated equivalent for the dashboard's manual "Clone
+// access from..." action.
+export const GwsUserSchema = z.object({ email: z.string(), name: z.string() });
+export type GwsUser = z.infer<typeof GwsUserSchema>;
+
+export const GwsUserSearchResponseSchema = z.object({ results: z.array(GwsUserSchema) });
+export type GwsUserSearchResponse = z.infer<typeof GwsUserSearchResponseSchema>;
 
 // ── Toggles ────────────────────────────────────────────────────────────────────
 export const ToggleNameSchema = z.enum([
@@ -180,6 +190,16 @@ export type ScheduledJob = z.infer<typeof ScheduledJobSchema>;
 export const ScheduledJobsResponseSchema = z.object({
   jobs: z.array(ScheduledJobSchema),
 });
+
+// Per-ticket outcomes for one job's own runs -- same shape as a raw audit
+// event, just pre-filtered server-side to this one job's flow(s)/trigger.
+export const ScheduledJobLogResponseSchema = z.object({
+  job: ScheduledJobSchema,
+  total: z.number(),
+  page: z.number(),
+  results: z.array(AuditEventSchema),
+});
+export type ScheduledJobLogResponse = z.infer<typeof ScheduledJobLogResponseSchema>;
 
 // ── Employee Progress ─────────────────────────────────────────────────────────
 // "manual_task" covers real Jira subtasks this automation never touches

@@ -8,6 +8,7 @@ import { AuditLog } from "@/pages/AuditLog";
 import { Settings } from "@/pages/Settings";
 import { EmployeeSearch } from "@/pages/EmployeeSearch";
 import { Approvals } from "@/pages/Approvals";
+import { Schedules } from "@/pages/Schedules";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/tickets/:issueKey" element={<TicketDetail />} />
         <Route path="/employees" element={<EmployeeSearch />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/schedules" element={<Schedules />} />
         <Route path="/anomalies" element={<Anomalies />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/settings" element={<Settings />} />

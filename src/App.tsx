@@ -7,11 +7,11 @@ import { Overview } from "@/pages/Overview";
 import { Tickets } from "@/pages/Tickets";
 import { TicketDetail } from "@/pages/TicketDetail";
 import { Anomalies } from "@/pages/Anomalies";
-import { AuditLog } from "@/pages/AuditLog";
 import { Settings } from "@/pages/Settings";
 import { EmployeeSearch } from "@/pages/EmployeeSearch";
 import { Approvals } from "@/pages/Approvals";
 import { Schedules } from "@/pages/Schedules";
+import { AutomationDetail } from "@/pages/AutomationDetail";
 
 export default function App() {
   return (
@@ -27,7 +27,8 @@ export default function App() {
             <Route path="/approvals" element={<Approvals />} />
             <Route path="/schedules" element={<Schedules />} />
             <Route path="/anomalies" element={<Anomalies />} />
-            <Route path="/audit-log" element={<AuditLog />} />
+            <Route path="/audit-log" element={<Anomalies />} />
+            <Route path="/automations/:flow" element={<AutomationDetail />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>

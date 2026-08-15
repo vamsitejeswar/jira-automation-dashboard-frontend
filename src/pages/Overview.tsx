@@ -5,7 +5,7 @@ import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
   Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, Activity, AlertTriangle, Play, Loader2,
-  ArrowUpRight, Search,
+  ArrowUpRight, Search, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { SeverityBadge, FlowBadge } from "@/components/app/badges";
+import { toast } from "@/components/ui/toast";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/app/preset-picker";
@@ -38,15 +39,15 @@ function getPresetDates(p: Preset) {
   return p === "today" ? { from: todayStr, to: todayStr } : p === "7d" ? { from: ago(7), to: todayStr } : { from: ago(30), to: todayStr };
 }
 
-// No trend arrows here -- an earlier version showed hardcoded +12%/+4%/-3%
-// on every load regardless of real data, which is worse than showing
-// nothing. Restore a trend once real day-over-day/week-over-week
-// aggregation exists; until then these are plain counts.
+// trendKey names the matching field in kpis.previousPeriod -- a real
+// same-length prior window, computed server-side (see admin_api.py's
+// _previous_period), replacing the old hardcoded +12%/+4%/-3% arrows that
+// showed on every load regardless of real data.
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"    as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "offboardedCount"   as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "pendingApprovals"  as const, label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
-  { dataKey: "failuresCount"     as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
+  { dataKey: "onboardedCount"    as const, trendKey: "onboardedCount"  as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "offboardedCount"   as const, trendKey: "offboardedCount" as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "pendingApprovals"  as const, trendKey: null,                       label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
+  { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
 ];
 
 /* ── Skeletons ──────────────────────────────────────────────── */
@@ -102,10 +103,16 @@ function OverviewSkeleton() {
 }
 
 /* ── KPI tile ───────────────────────────────────────────────── */
-function KpiTile({ label, value, icon: Icon, accent, lightBg, live, sub, viewTo }: {
-  label: string; value: number; icon: React.ElementType;
+function KpiTile({ label, value, previous, icon: Icon, accent, lightBg, live, sub, viewTo }: {
+  label: string; value: number; previous?: number; icon: React.ElementType;
   accent: string; lightBg: string; live?: boolean; sub: string; viewTo: string;
 }) {
+  const hasTrend = previous !== undefined && previous > 0;
+  const pctChange = hasTrend ? Math.round(((value - previous!) / previous!) * 100) : 0;
+  const up = pctChange >= 0;
+  const TrendIcon = up ? TrendingUp : TrendingDown;
+  // For Failures, "up" is bad (red); for everything else "up" is good (green).
+  const trendColor = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
     <div className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
       <div className="h-1" style={{ background: accent }} />
@@ -120,7 +127,17 @@ function KpiTile({ label, value, icon: Icon, accent, lightBg, live, sub, viewTo 
             <Icon className="h-5 w-5" style={{ color: accent }} />
           </div>
         </div>
-        <div className="mt-4 text-xs text-slate-400">{live ? "Live count, not date-ranged" : "For the selected date range"}</div>
+        {live ? (
+          <div className="mt-4 text-xs text-slate-400">Live count, not date-ranged</div>
+        ) : hasTrend ? (
+          <div className="mt-4 flex items-center gap-1.5 text-xs">
+            <TrendIcon className="h-3.5 w-3.5" style={{ color: trendColor }} />
+            <span className="font-semibold" style={{ color: trendColor }}>{up ? "+" : ""}{pctChange}%</span>
+            <span className="text-slate-400">vs previous period</span>
+          </div>
+        ) : (
+          <div className="mt-4 text-xs text-slate-400">No prior-period data yet to compare</div>
+        )}
       </div>
       <div className="border-t border-slate-100 px-5 py-2.5">
         <Link to={viewTo} className="flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: accent }}>
@@ -250,7 +267,11 @@ export function Overview() {
   const qc = useQueryClient();
   const forceRun = useMutation({
     mutationFn: (name: string) => runScheduledJob(name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled-jobs"] }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["scheduled-jobs"] });
+      toast.add({ title: "Job triggered", description: `"${res.job.label}" is running now.` });
+    },
+    onError: () => toast.add({ title: "Force run failed", description: "Couldn't trigger that job. Try again." }),
   });
 
   // "Needs your attention" -- named, linked items instead of a bare count,
@@ -335,7 +356,20 @@ export function Overview() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {KPI_CONFIG.map((c) => <KpiTile key={c.dataKey} label={c.label} icon={c.icon} accent={c.accent} lightBg={c.lightBg} live={c.live} sub={c.sub} viewTo={c.viewTo} value={kpis.data![c.dataKey]} />)}
+            {KPI_CONFIG.map((c) => (
+              <KpiTile
+                key={c.dataKey}
+                label={c.label}
+                icon={c.icon}
+                accent={c.accent}
+                lightBg={c.lightBg}
+                live={c.live}
+                sub={c.sub}
+                viewTo={c.viewTo}
+                value={kpis.data![c.dataKey]}
+                previous={c.trendKey ? kpis.data!.previousPeriod?.[c.trendKey] : undefined}
+              />
+            ))}
           </div>
 
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">

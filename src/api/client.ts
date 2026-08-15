@@ -9,6 +9,7 @@ import {
   ScheduledJobsResponseSchema,
   ScheduledJobLogResponseSchema,
   AuditLogResponseSchema,
+  AutomationDetailSchema,
   MeSchema,
   EmployeeSearchResponseSchema,
   EmployeeSearchSuggestionsSchema,
@@ -22,6 +23,7 @@ import {
   type ScheduledJob,
   type ScheduledJobLogResponse,
   type AuditLogResponse,
+  type AutomationDetail,
   type Me,
   type EmployeeSearchResponse,
   type EmployeeSearchSuggestions,
@@ -106,6 +108,8 @@ export function updateToggle(name: string, value: boolean): Promise<{ toggles: T
 export interface AnomalyFilters {
   days?: number;
   includeNormal?: boolean;
+  flow?: string;
+  severity?: string;
   from?: string;
   to?: string;
   page?: number;
@@ -116,6 +120,10 @@ export function getAnomalies(filters: AnomalyFilters = {}): Promise<AnomalySumma
   const params = new URLSearchParams();
   params.set("days", String(Math.min(filters.days ?? 7, 30)));
   if (filters.includeNormal) params.set("include_normal", "true");
+  if (filters.flow) params.set("flow", filters.flow);
+  if (filters.severity) params.set("severity", filters.severity);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
   params.set("page", String(filters.page ?? 1));
   params.set("page_size", String(filters.pageSize ?? 50));
   return fetchJSON(AnomalySummarySchema, `/api/admin/anomalies?${params}`);
@@ -193,6 +201,10 @@ export function getAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogResp
   params.set("page", String(filters.page ?? 1));
   params.set("page_size", String(filters.pageSize ?? 50));
   return fetchJSON(AuditLogResponseSchema, `/api/admin/audit-log?${params}`);
+}
+
+export function getAutomationDetail(flow: string, days = 30): Promise<AutomationDetail> {
+  return fetchJSON(AutomationDetailSchema, `/api/admin/automations/${encodeURIComponent(flow)}?days=${days}`);
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────

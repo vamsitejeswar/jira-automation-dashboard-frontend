@@ -43,6 +43,20 @@ function parseYMD(s: string | undefined): Date | undefined {
   return isValid(d) ? d : undefined;
 }
 
+// A ticket sitting in one of these non-terminal states for far longer than
+// normal has no other flag distinguishing it from one 30 seconds into a
+// completely normal run -- these outcomes mean "waiting on something,"
+// which past a couple of days is worth a human's attention.
+const STUCK_THRESHOLD_HOURS = 48;
+const NON_TERMINAL_OUTCOMES = new Set([
+  "setup_email_sent", "transfer_email_sent", "deferred_to_lwd", "deferred_to_doj",
+]);
+function isStuck(t: TicketSummary): boolean {
+  if (!NON_TERMINAL_OUTCOMES.has(t.currentStatus)) return false;
+  const hoursSince = (Date.now() - new Date(t.updatedAt).getTime()) / 3_600_000;
+  return hoursSince >= STUCK_THRESHOLD_HOURS;
+}
+
 const col = createColumnHelper<TicketSummary>();
 
 const columns = [
@@ -89,6 +103,9 @@ const columns = [
         <OutcomeBadge outcome={info.getValue()} />
         {info.row.original.hasError && !isSelfEvidentError(info.getValue()) && (
           <Badge variant="destructive">Error</Badge>
+        )}
+        {isStuck(info.row.original) && (
+          <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">Stuck</Badge>
         )}
       </div>
     ),

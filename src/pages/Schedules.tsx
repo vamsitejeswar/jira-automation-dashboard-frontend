@@ -9,6 +9,7 @@ import { SelectField } from "@/components/app/select-field";
 import { EmptyState } from "@/components/app/empty-state";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
+import { toast } from "@/components/ui/toast";
 import { getScheduledJobs, getScheduledJobLog, runScheduledJob } from "@/api";
 import { formatIST, describeCron } from "@/lib/utils";
 
@@ -37,10 +38,12 @@ export function Schedules() {
   const qc = useQueryClient();
   const forceRun = useMutation({
     mutationFn: (name: string) => runScheduledJob(name),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["scheduled-jobs"] });
       qc.invalidateQueries({ queryKey: ["scheduled-job-log"] });
+      toast.add({ title: "Job triggered", description: `"${res.job.label}" is running now.` });
     },
+    onError: () => toast.add({ title: "Force run failed", description: "Couldn't trigger that job. Try again." }),
   });
 
   function selectJob(name: string) {
@@ -141,7 +144,7 @@ export function Schedules() {
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Time</th>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Ticket</th>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Flow</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Result</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Status</th>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Detail</th>
                     </tr>
                   </thead>

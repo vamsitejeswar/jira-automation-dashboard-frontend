@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Ticket,
   AlertTriangle,
-  ScrollText,
   UserSearch,
   MailCheck,
   Settings,
@@ -14,15 +13,27 @@ import {
 } from "lucide-react";
 import { getMe, logout } from "@/api";
 
-const NAV = [
-  { to: "/", icon: LayoutDashboard, label: "Overview" },
-  { to: "/tickets", icon: Ticket, label: "Tickets" },
-  { to: "/employees", icon: UserSearch, label: "Employee Search" },
-  { to: "/approvals", icon: MailCheck, label: "Approvals" },
-  { to: "/schedules", icon: CalendarClock, label: "Schedules" },
-  { to: "/anomalies", icon: AlertTriangle, label: "Anomalies" },
-  { to: "/audit-log", icon: ScrollText, label: "Audit Log" },
-  { to: "/settings", icon: Settings, label: "Settings" },
+// Grouped by the question each answers, not by the backend concept behind
+// it -- "what's true right now," "find someone," "needs a decision from
+// me," "is the system healthy," in that order.
+const NAV_GROUPS: { title: string | null; items: { to: string; icon: React.ElementType; label: string }[] }[] = [
+  { title: null, items: [{ to: "/", icon: LayoutDashboard, label: "Dashboard" }] },
+  {
+    title: "People & Tickets",
+    items: [
+      { to: "/employees", icon: UserSearch, label: "Employee Search" },
+      { to: "/tickets", icon: Ticket, label: "All Tickets" },
+    ],
+  },
+  { title: "Needs a decision", items: [{ to: "/approvals", icon: MailCheck, label: "Approvals" }] },
+  {
+    title: "System Health",
+    items: [
+      { to: "/schedules", icon: CalendarClock, label: "Scheduled Jobs" },
+      { to: "/anomalies", icon: AlertTriangle, label: "Failures & History" },
+    ],
+  },
+  { title: null, items: [{ to: "/settings", icon: Settings, label: "Settings" }] },
 ];
 
 export function Sidebar() {
@@ -58,31 +69,37 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
-        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-          Navigation
-        </p>
-        <ul className="space-y-0.5">
-          {NAV.map(({ to, icon: Icon, label }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={to === "/"}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
-                    isActive
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  )
-                }
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="truncate">{label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={gi}>
+            {group.title && (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                {group.title}
+              </p>
+            )}
+            <ul className="space-y-0.5">
+              {group.items.map(({ to, icon: Icon, label }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    end={to === "/"}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                        isActive
+                          ? "bg-blue-600 text-white shadow-md"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      )
+                    }
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}

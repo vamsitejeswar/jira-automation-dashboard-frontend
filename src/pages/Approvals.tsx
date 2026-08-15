@@ -19,6 +19,7 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
   AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/toast";
 import { getApprovals, approveMailApproval, rejectMailApproval, searchGwsUsers } from "@/api";
 import type { Approval, ApprovalStatus, GwsUser } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -254,11 +255,18 @@ export function Approvals() {
       const body = approval.flow === "akamai_access" && kind === "approve" ? { cloneFromEmail: cloneFromEmail.trim() } : {};
       return kind === "approve" ? approveMailApproval(approval.issueKey, body) : rejectMailApproval(approval.issueKey, body);
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["approvals"] });
       qc.invalidateQueries({ queryKey: ["kpis"] });
+      toast.add({
+        title: vars.kind === "approve" ? "Approved" : "Rejected",
+        description: `${vars.approval.issueKey} ${vars.kind === "approve" ? "was approved" : "was rejected"} manually.`,
+      });
       setPendingAction(null);
       setCloneFromEmail("");
+    },
+    onError: (_err, vars) => {
+      toast.add({ title: "Action failed", description: `Couldn't ${vars.kind} ${vars.approval.issueKey}.` });
     },
   });
 

@@ -91,6 +91,13 @@ export const KpisSchema = z.object({
   pendingApprovals: z.number(),
   byFlow: z.record(z.number()),
   byDay: z.array(KpisByDaySchema),
+  // Only present when the request sent an explicit from/to range -- a real
+  // same-length prior window, not the old hardcoded +12%/+4%/-3% arrows.
+  previousPeriod: z.object({
+    onboardedCount: z.number(),
+    offboardedCount: z.number(),
+    failuresCount: z.number(),
+  }).optional(),
 });
 export type Kpis = z.infer<typeof KpisSchema>;
 
@@ -281,6 +288,22 @@ export const AuditLogResponseSchema = z.object({
   results: z.array(AuditEventSchema),
 });
 export type AuditLogResponse = z.infer<typeof AuditLogResponseSchema>;
+
+// ── Automation detail ──────────────────────────────────────────────────────────
+export const AutomationToggleSchema = z.object({ name: z.string(), value: z.boolean() });
+
+export const AutomationDetailSchema = z.object({
+  flow: FlowSchema,
+  ticketCount: z.number(),
+  doneCount: z.number(),
+  failedCount: z.number(),
+  inFlightCount: z.number(),
+  // null when no ticket has concluded yet in the window -- nothing to rate.
+  successRate: z.number().nullable(),
+  toggles: z.array(AutomationToggleSchema),
+  recentEvents: z.array(AuditEventSchema),
+});
+export type AutomationDetail = z.infer<typeof AutomationDetailSchema>;
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 export const MeSchema = z.object({

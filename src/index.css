@@ -107,35 +107,36 @@
   }
 
   .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 20% 92%;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 92%;
 
-    --card: 222 44% 10%;
-    --card-foreground: 210 20% 92%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 92%;
 
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 19% 18%;
-    --secondary-foreground: 210 20% 92%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 217 19% 18%;
-    --muted-foreground: 215 15% 65%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 217 19% 22%;
-    --accent-foreground: 210 20% 92%;
+    --accent: 0 0% 22%;
+    --accent-foreground: 0 0% 92%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 19% 20%;
-    --input: 217 19% 22%;
+    --border: 0 0% 20%;
+    --input: 0 0% 22%;
     --ring: 217 91% 60%;
 
-    /* Sidebar is already a dark navy in light mode -- deepen it slightly so
-       it still reads as a distinct surface against the darker page body. */
-    --sidebar-bg: 222 47% 5%;
-    --sidebar-fg: 215 20% 70%;
+    /* Sidebar is already a dark navy in light mode -- deepen it to a neutral
+       dark grey so it still reads as a distinct surface against the darker
+       page body. */
+    --sidebar-bg: 0 0% 5%;
+    --sidebar-fg: 0 0% 70%;
     --sidebar-active-bg: 217 91% 60%;
     --sidebar-active-fg: 0 0% 100%;
 

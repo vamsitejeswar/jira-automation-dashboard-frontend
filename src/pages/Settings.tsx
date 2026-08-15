@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/toast";
 import { getToggles, updateToggle } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { Toggle, ToggleName } from "@/api";
@@ -234,8 +235,17 @@ export function Settings() {
       );
       return { prev };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (_err, vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(["toggles"], ctx.prev);
+      toast.add({
+        title: "Update failed",
+        description: `Couldn't ${vars.value ? "enable" : "disable"} ${TOGGLE_LABELS[vars.name as ToggleName] ?? vars.name}.`,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      toast.add({
+        title: `${TOGGLE_LABELS[vars.name as ToggleName] ?? vars.name} ${vars.value ? "enabled" : "disabled"}`,
+      });
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["toggles"] }),
   });

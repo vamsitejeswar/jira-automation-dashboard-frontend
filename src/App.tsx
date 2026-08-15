@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { Login } from "@/pages/Login";
@@ -14,21 +15,23 @@ import { Schedules } from "@/pages/Schedules";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route element={<AuthGate />}>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Overview />} />
-          <Route path="/tickets" element={<Tickets />} />
-          <Route path="/tickets/:issueKey" element={<TicketDetail />} />
-          <Route path="/employees" element={<EmployeeSearch />} />
-          <Route path="/approvals" element={<Approvals />} />
-          <Route path="/schedules" element={<Schedules />} />
-          <Route path="/anomalies" element={<Anomalies />} />
-          <Route path="/audit-log" element={<AuditLog />} />
-          <Route path="/settings" element={<Settings />} />
+    <Toaster position="top">
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={<AuthGate />}>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Overview />} />
+            <Route path="/tickets" element={<Tickets />} />
+            <Route path="/tickets/:issueKey" element={<TicketDetail />} />
+            <Route path="/employees" element={<EmployeeSearch />} />
+            <Route path="/approvals" element={<Approvals />} />
+            <Route path="/schedules" element={<Schedules />} />
+            <Route path="/anomalies" element={<Anomalies />} />
+            <Route path="/audit-log" element={<AuditLog />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </Toaster>
   );
 }

@@ -465,8 +465,8 @@ export function EmployeeSearch() {
         {/* No search yet */}
         {!submittedQuery && !isLoading && (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 mb-4">
-              <Search className="h-7 w-7 text-slate-400" />
+            <div className="flex items-center justify-center rounded-2xl mb-4">
+             <img src="/search_employee.svg" className="h-52"/>
             </div>
             <p className="text-base font-semibold text-slate-700">Search for an employee</p>
             <p className="mt-1 text-sm text-slate-400">Enter an email, ticket ID, or name above to see their automation status.</p>

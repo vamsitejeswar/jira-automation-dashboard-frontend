@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { SeverityBadge, FlowBadge } from "@/components/app/badges";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/toast";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
@@ -41,8 +42,16 @@ const KPI_CONFIG = [
   { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
 ];
 
+const DISMISSED_STORAGE_KEY = "dashboard-dismissed-attention-items";
+
 const INTEGRATION_LABELS: Record<keyof Health, string> = {
   jira: "Jira", googleWorkspace: "Google Workspace", activeDirectory: "Active Directory", microsoft365: "Microsoft 365",
+};
+
+const INTEGRATION_STATUS_COPY: Record<IntegrationStatus, string> = {
+  ok: "Connected — automations can reach it normally.",
+  down: "Can't connect right now — automations that depend on it may fail until this recovers.",
+  not_configured: "Not connected yet — related automations are skipped until this is set up.",
 };
 
 /* ── Skeletons ──────────────────────────────────────────────── */
@@ -246,18 +255,22 @@ export function Overview() {
   // built entirely from data this page already fetches (no extra request).
   // A failed job's own last real run outweighs Cloud Scheduler's own
   // enabled/paused state, which is why this reads job.lastRunStatus, not
-  // job.state.
+  // job.state. Each item has a stable id (not an array index) so
+  // dismissing it survives the list being rebuilt on every refetch --
+  // it only comes back once it's a genuinely different problem.
   const failedJobs = (jobs.data?.jobs ?? []).filter((j) => j.lastRunStatus === "failed");
-  const attentionItems: { text: string; to: string }[] = [];
-  failedJobs.forEach((j) => attentionItems.push({ text: `"${j.label}" failed its last run`, to: "/schedules" }));
+  const attentionItems: { id: string; text: string; to: string }[] = [];
+  failedJobs.forEach((j) => attentionItems.push({ id: `job:${j.name}`, text: `"${j.label}" failed its last run`, to: "/schedules" }));
   if (kpis.data && kpis.data.pendingApprovals > 0) {
     attentionItems.push({
+      id: "pending-approvals",
       text: `${kpis.data.pendingApprovals} approval${kpis.data.pendingApprovals === 1 ? "" : "s"} waiting on a manager`,
       to: "/approvals",
     });
   }
   if (kpis.data && kpis.data.failuresCount > 0) {
     attentionItems.push({
+      id: "failures",
       text: `${kpis.data.failuresCount} failure${kpis.data.failuresCount === 1 ? "" : "s"} in the selected period`,
       to: "/anomalies",
     });
@@ -268,8 +281,31 @@ export function Overview() {
   const downIntegrations = health.data
     ? (Object.entries(health.data) as [keyof Health, IntegrationStatus][]).filter(([, s]) => s === "down")
     : [];
-  downIntegrations.forEach(([key]) => attentionItems.push({ text: `${INTEGRATION_LABELS[key]} isn't reachable right now`, to: "/settings" }));
+  downIntegrations.forEach(([key]) =>
+    attentionItems.push({ id: `integration:${key}`, text: `${INTEGRATION_LABELS[key]} isn't reachable right now`, to: "/settings" })
+  );
+
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(DISMISSED_STORAGE_KEY) ?? "[]"));
+    } catch {
+      return new Set();
+    }
+  });
+  function dismiss(id: string) {
+    setDismissedIds((prev) => {
+      const next = new Set(prev).add(id);
+      localStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+  const visibleAttentionItems = attentionItems.filter((item) => !dismissedIds.has(item.id));
+  const dismissedCount = attentionItems.length - visibleAttentionItems.length;
+  // "Healthy" only when there's genuinely nothing wrong -- dismissing
+  // everything still-broken shows a distinct "caught up, but dismissed
+  // items exist" state instead of falsely claiming full health.
   const systemHealthy = attentionItems.length === 0;
+  const allDismissed = attentionItems.length > 0 && visibleAttentionItems.length === 0;
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -304,51 +340,56 @@ export function Overview() {
               "is this healthy right now," before any other detail. */}
           <div
             className={`rounded-xl border px-5 py-4 shadow-sm ${
-              systemHealthy ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+              systemHealthy || allDismissed ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className={`inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0 ${systemHealthy ? "bg-emerald-500" : "bg-amber-500"}`} />
-              <p className={`text-sm font-bold ${systemHealthy ? "text-emerald-800" : "text-amber-800"}`}>
-                {systemHealthy ? "Healthy — nothing needs you right now" : "Needs your attention"}
+              <span
+                className={`inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                  systemHealthy || allDismissed ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+              <p className={`text-sm font-bold ${systemHealthy || allDismissed ? "text-emerald-800" : "text-amber-800"}`}>
+                {systemHealthy
+                  ? "All systems operational"
+                  : allDismissed
+                  ? "All clear — dismissed items hidden below"
+                  : "Action needed"}
               </p>
             </div>
-            {!systemHealthy && (
+            {visibleAttentionItems.length > 0 && (
               <ul className="mt-2.5 space-y-1.5">
-                {attentionItems.map((item, i) => (
-                  <li key={i}>
+                {visibleAttentionItems.map((item) => (
+                  <li key={item.id} className="flex items-center gap-3">
                     <Link to={item.to} className="text-sm font-medium text-amber-800 hover:underline">
                       {item.text} →
                     </Link>
+                    <button
+                      onClick={() => dismiss(item.id)}
+                      className="ml-auto shrink-0 text-xs font-medium text-amber-700/70 hover:text-amber-900 hover:underline"
+                    >
+                      Ignore
+                    </button>
                   </li>
                 ))}
               </ul>
+            )}
+            {dismissedCount > 0 && (
+              <button
+                onClick={() => {
+                  setDismissedIds(new Set());
+                  localStorage.removeItem(DISMISSED_STORAGE_KEY);
+                }}
+                className="mt-2.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+              >
+                Show {dismissedCount} dismissed item{dismissedCount === 1 ? "" : "s"}
+              </button>
             )}
           </div>
 
           {/* Integration health -- so a real Jira/GWS/AD/M365 outage reads
               as exactly that, not as an unexplained pile of failed events. */}
-          {health.data && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">Integrations</span>
-              {(Object.entries(health.data) as [keyof Health, IntegrationStatus][]).map(([key, status]) => (
-                <span
-                  key={key}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    status === "ok" ? "bg-emerald-50 text-emerald-700"
-                      : status === "down" ? "bg-red-50 text-red-700"
-                      : "bg-slate-100 text-slate-400"
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${
-                    status === "ok" ? "bg-emerald-500" : status === "down" ? "bg-red-500" : "bg-slate-300"
-                  }`} />
-                  {INTEGRATION_LABELS[key]}
-                  {status === "not_configured" && " (not set up)"}
-                </span>
-              ))}
-            </div>
-          )}
+       
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {KPI_CONFIG.map((c) => (
@@ -494,7 +535,37 @@ export function Overview() {
                 </ul>
               )}
             </div>
+            
           </div>
+             {health.data && (
+            <TooltipProvider>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">Integrations</span>
+              {(Object.entries(health.data) as [keyof Health, IntegrationStatus][]).map(([key, status]) => (
+                <Tooltip key={key}>
+                  <TooltipTrigger
+                    render={
+                      <span
+                        className={`inline-flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                          status === "ok" ? "bg-emerald-50 text-emerald-700"
+                            : status === "down" ? "bg-red-50 text-red-700"
+                            : "bg-slate-100 text-slate-400"
+                        }`}
+                      />
+                    }
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      status === "ok" ? "bg-emerald-500" : status === "down" ? "bg-red-500" : "bg-slate-300"
+                    }`} />
+                    {INTEGRATION_LABELS[key]}
+                    {status === "not_configured" && " (not set up)"}
+                  </TooltipTrigger>
+                  <TooltipContent>{INTEGRATION_STATUS_COPY[status]}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+            </TooltipProvider>
+          )}
         </div>
       )}
     </div>

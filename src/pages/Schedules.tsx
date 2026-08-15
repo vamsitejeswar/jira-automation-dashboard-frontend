@@ -6,18 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/app/empty-state";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { getScheduledJobs, getScheduledJobLog, runScheduledJob } from "@/api";
-import type { ScheduledJob } from "@/api";
 import { formatIST, describeCron } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
@@ -79,33 +77,30 @@ export function Schedules() {
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <Combobox
-              items={jobs.data!.jobs}
-              value={jobs.data!.jobs.find((j) => j.name === selectedJob) ?? null}
-              onValueChange={(job) => job && selectJob((job as ScheduledJob).name)}
-              itemToStringValue={(job) => (job as ScheduledJob).name}
-              itemToStringLabel={(job) => (job as ScheduledJob).label}
+            <Select
+              items={Object.fromEntries(jobs.data!.jobs.map((j) => [j.name, j.label]))}
+              value={selectedJob ?? ""}
+              onValueChange={(name) => name && selectJob(name)}
             >
-              <ComboboxInput placeholder="Select a job..." className="w-full sm:w-96" />
-              <ComboboxContent>
-                <ComboboxEmpty>No jobs found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(job: ScheduledJob) => (
-                    <ComboboxItem key={job.name} value={job} className="flex-col items-stretch gap-1 py-2 pr-2 pl-2.5">
-                      <p className="pr-6 text-sm font-semibold text-slate-800 truncate">{job.label}</p>
-                      <p className="font-mono text-[11px] text-slate-400 truncate">{job.name}</p>
-                      <p className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock className="h-3 w-3" />
-                        {describeCron(job.schedule, job.timeZone)}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
-                      </p>
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              <SelectTrigger className="w-full sm:w-96">
+                <SelectValue placeholder="Select a job..." />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs.data!.jobs.map((job) => (
+                  <SelectItem key={job.name} value={job.name} className="flex-col items-stretch gap-1 py-2 pr-2 pl-2.5">
+                    <p className="pr-6 text-sm font-semibold text-slate-800 truncate">{job.label}</p>
+                    <p className="font-mono text-[11px] text-slate-400 truncate">{job.name}</p>
+                    <p className="flex items-center gap-1 text-xs text-slate-500">
+                      <Clock className="h-3 w-3" />
+                      {describeCron(job.schedule, job.timeZone)}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
+                    </p>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"

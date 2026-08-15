@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { FlowBadge } from "@/components/app/badges";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -24,17 +25,35 @@ import { formatIST } from "@/lib/utils";
 
 const CLONE_SEARCH_DEBOUNCE_MS = 250;
 
-const STATUS_CONFIG: Record<ApprovalStatus, { label: string; icon: React.ElementType; bg: string; color: string; dot: string }> = {
-  pending:      { label: "Pending",      icon: Clock,        bg: "#fffbeb", color: "#b45309", dot: "#d97706" },
-  approved:     { label: "Approved",     icon: CheckCircle2, bg: "#f0fdf4", color: "#15803d", dot: "#16a34a" },
-  ignored:      { label: "Ignored",      icon: Ban,          bg: "#f8fafc", color: "#475569", dot: "#94a3b8" },
-  no_response:  { label: "No Response",  icon: AlertOctagon, bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626" },
-  failed:       { label: "Failed",       icon: XCircle,      bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626" },
+const STATUS_CONFIG: Record<ApprovalStatus, { label: string; icon: React.ElementType; bg: string; color: string; dot: string; description: string }> = {
+  pending: {
+    label: "Pending", icon: Clock, bg: "#fffbeb", color: "#b45309", dot: "#d97706",
+    description: "Decision email sent and being actively tracked -- will be reminded up to 3 times if the manager doesn't respond.",
+  },
+  approved: {
+    label: "Approved", icon: CheckCircle2, bg: "#f0fdf4", color: "#15803d", dot: "#16a34a",
+    description: "The manager (or an admin, manually) already made a decision -- access cloned, no action needed, or the Drive transfer completed.",
+  },
+  ignored: {
+    label: "Ignored", icon: Ban, bg: "#f8fafc", color: "#475569", dot: "#94a3b8",
+    description: "No email was ever sent -- required info (manager or employee email) was missing on the ticket.",
+  },
+  no_response: {
+    label: "No Response", icon: AlertOctagon, bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626",
+    description: "Reminded 3 times with no reply -- the automation gave up and commented on the ticket instead.",
+  },
+  failed: {
+    label: "Failed", icon: XCircle, bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626",
+    description: "Sending the decision email itself failed (e.g. an SMTP error) -- no email ever reached the manager.",
+  },
   // The email went out but there's no live pending_approvals record for it
   // (e.g. sent by a revision deployed before reminder-tracking existed) --
   // it'll never be reminded or auto-given-up, and can't be manually
   // approved/rejected from here either (see ApprovalRow's Actions gating).
-  untracked:    { label: "Untracked",    icon: HelpCircle,   bg: "#f8fafc", color: "#64748b", dot: "#94a3b8" },
+  untracked: {
+    label: "Untracked", icon: HelpCircle, bg: "#f8fafc", color: "#64748b", dot: "#94a3b8",
+    description: "Email sent before this dashboard's reminder-tracking existed -- won't be reminded or actionable here. The manager's original email link still works fine.",
+  },
 };
 
 const STATUS_TABS: { key: ApprovalStatus | "all"; label: string }[] = [
@@ -51,13 +70,20 @@ function StatusBadge({ status }: { status: ApprovalStatus }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-      style={{ background: cfg.bg, color: cfg.color }}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {cfg.label}
-    </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="inline-flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={{ background: cfg.bg, color: cfg.color }}
+          />
+        }
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {cfg.label}
+      </TooltipTrigger>
+      <TooltipContent>{cfg.description}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -286,6 +312,7 @@ export function Approvals() {
   }
 
   return (
+    <TooltipProvider delay={200}>
     <div className="min-h-full bg-slate-50">
       {/* Page header */}
       <div className="border-b bg-white px-8 py-6">
@@ -302,19 +329,28 @@ export function Approvals() {
         {/* Status tabs + search */}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap gap-2">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setStatus(tab.key)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  status === tab.key
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {STATUS_TABS.map((tab) => {
+              const button = (
+                <button
+                  key={tab.key}
+                  onClick={() => setStatus(tab.key)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    status === tab.key
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+              if (tab.key === "all") return button;
+              return (
+                <Tooltip key={tab.key}>
+                  <TooltipTrigger render={button} />
+                  <TooltipContent>{STATUS_CONFIG[tab.key].description}</TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <div className="relative ml-auto w-64">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -448,5 +484,6 @@ export function Approvals() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }

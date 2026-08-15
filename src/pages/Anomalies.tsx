@@ -12,13 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
-import { SeverityBadge, FlowBadge, OutcomeBadge, isSelfEvidentError } from "@/components/app/badges";
+import { FlowBadge, OutcomeBadge, isSelfEvidentError } from "@/components/app/badges";
+import { Pagination } from "@/components/app/pagination";
 import { getAnomalies } from "@/api";
 import type { AnomalyFilters } from "@/api";
 import { formatIST } from "@/lib/utils";
 import { exportToExcel, auditLogToExcelRows } from "@/lib/export";
-
-type Preset = "today" | "3d" | "7d" | "14d" | "30d" | "custom";
+import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
 
 const FLOW_OPTIONS = [
   { value: "gws_mailbox",           label: "Mailbox" },
@@ -40,34 +40,6 @@ function parseYMD(s: string | undefined): Date | undefined {
   const d = parse(s, "yyyy-MM-dd", new Date());
   return isValid(d) ? d : undefined;
 }
-
-function getPresetDates(preset: Preset): { from: string; to: string } {
-  const today = new Date();
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  const daysAgo = (n: number) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - n);
-    return fmt(d);
-  };
-  const todayStr = fmt(today);
-  switch (preset) {
-    case "today":  return { from: todayStr, to: todayStr };
-    case "3d":     return { from: daysAgo(3), to: todayStr };
-    case "7d":     return { from: daysAgo(7), to: todayStr };
-    case "14d":    return { from: daysAgo(14), to: todayStr };
-    case "30d":    return { from: daysAgo(30), to: todayStr };
-    default:       return { from: "", to: todayStr };
-  }
-}
-
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "today",  label: "Today" },
-  { key: "3d",     label: "3 days" },
-  { key: "7d",     label: "7 days" },
-  { key: "14d",    label: "14 days" },
-  { key: "30d",    label: "30 days" },
-  { key: "custom", label: "Custom" },
-];
 
 const SEVERITY_BORDER: Record<string, string> = {
   ERROR:   "border-l-red-500",
@@ -131,7 +103,7 @@ function AnomaliesSkeleton() {
 const ANOMALIES_PAGE_SIZE = 50;
 
 export function Anomalies() {
-  const [preset, setPreset]           = useState<Preset>("7d");
+  const [preset, setPreset]           = useState<DatePreset>("7d");
   const [customFrom, setCustomFrom]   = useState("");
   const [customTo, setCustomTo]       = useState(() => new Date().toISOString().split("T")[0]);
   const [includeNormal, setIncludeNormal] = useState(false);
@@ -163,7 +135,7 @@ export function Anomalies() {
   // Any change to what's being scanned starts back at page 1 -- the
   // previous page number almost never lines up with a totally different
   // result set.
-  function updatePreset(p: Preset) { setPreset(p); setPage(1); }
+  function updatePreset(p: DatePreset) { setPreset(p); setPage(1); }
   function updateIncludeNormal(v: boolean) { setIncludeNormal(v); setPage(1); }
   function updateFlow(v: string) { setFlow(v || undefined); setPage(1); }
   function updateSeverity(v: string) { setSeverity(v || undefined); setPage(1); }
@@ -235,7 +207,7 @@ export function Anomalies() {
 
         {/* Filter bar */}
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <PresetPicker options={PRESETS} value={preset} onChange={updatePreset} />
+          <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
 
           <DatePickerWithRange
             value={{
@@ -389,8 +361,10 @@ export function Anomalies() {
                         SEVERITY_BORDER[a.severity] ?? "border-l-slate-200"
                       } ${SEVERITY_ROW_BG[a.severity] ?? ""}`}
                     >
+                      {/* Severity is already conveyed by this row's left
+                          border + tint -- a third badge repeating it was
+                          just noise, so only flow + status are shown here. */}
                       <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                        <SeverityBadge severity={a.severity} />
                         <FlowBadge flow={a.flow} />
                         <OutcomeBadge outcome={a.outcome} />
                         {a.reason && !isSelfEvidentError(a.outcome) && (
@@ -418,34 +392,8 @@ export function Anomalies() {
                 </ul>
               )}
               {data!.total > ANOMALIES_PAGE_SIZE && (
-                <div className="flex items-center justify-between border-t px-5 py-3 text-xs text-slate-500">
-                  <span>
-                    Showing{" "}
-                    <span className="font-semibold text-slate-900">
-                      {(page - 1) * ANOMALIES_PAGE_SIZE + 1}–{Math.min(page * ANOMALIES_PAGE_SIZE, data!.total)}
-                    </span>{" "}
-                    of <span className="font-semibold text-slate-900">{data!.total}</span>
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => p - 1)}
-                      className="h-7 text-xs"
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page * ANOMALIES_PAGE_SIZE >= data!.total}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="h-7 text-xs"
-                    >
-                      Next
-                    </Button>
-                  </div>
+                <div className="border-t px-5 py-3">
+                  <Pagination page={page} pageSize={ANOMALIES_PAGE_SIZE} total={data!.total} onPageChange={setPage} itemLabel="events" />
                 </div>
               )}
             </div>

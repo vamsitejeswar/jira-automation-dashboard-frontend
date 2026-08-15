@@ -25,9 +25,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { getEmployeeProgress, getEmployeeSearchSuggestions } from "@/api";
+import { getEmployeeProgress } from "@/api";
 import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
 import { formatIST, titleCase } from "@/lib/utils";
+import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
 
 // How long to wait after the user stops typing before firing a live
 // suggestions request -- short enough to feel instant, long enough that a
@@ -272,14 +273,8 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
 export function EmployeeSearch() {
   const [inputVal, setInputVal] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<EmployeeSearchResult[]>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Guards against a slower, stale request's response landing after a
-  // newer one already resolved -- only the latest fired request is allowed
-  // to update state.
-  const requestId = useRef(0);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -302,34 +297,11 @@ export function EmployeeSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Live-as-you-type dropdown -- debounced so a fast typist doesn't fire a
-  // request per keystroke; cheap on the backend since it skips the audit
-  // log entirely (see GET /api/admin/employees/suggestions).
-  useEffect(() => {
-    if (inputVal.trim().length <= 2) {
-      setSuggestions([]);
-      setSuggestionsLoading(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      const thisRequest = ++requestId.current;
-      setSuggestionsLoading(true);
-      getEmployeeSearchSuggestions(inputVal.trim())
-        .then(res => {
-          if (requestId.current !== thisRequest) return;
-          setSuggestions(res.results);
-        })
-        .catch(() => {
-          if (requestId.current !== thisRequest) return;
-          setSuggestions([]);
-        })
-        .finally(() => {
-          if (requestId.current !== thisRequest) return;
-          setSuggestionsLoading(false);
-        });
-    }, SUGGESTIONS_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [inputVal]);
+  // Live-as-you-type dropdown, shared with Overview's global search box --
+  // debounced so a fast typist doesn't fire a request per keystroke; cheap
+  // on the backend since it skips the audit log entirely (see GET
+  // /api/admin/employees/suggestions).
+  const { suggestions, loading: suggestionsLoading } = useEmployeeSuggestions(inputVal, SUGGESTIONS_DEBOUNCE_MS);
 
   function submit(query: string) {
     const q = query.trim();

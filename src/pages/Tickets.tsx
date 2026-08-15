@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -26,6 +26,7 @@ import type { TicketSummary } from "@/api";
 import { formatIST } from "@/lib/utils";
 import { exportToExcel, ticketsToExcelRows } from "@/lib/export";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Pagination } from "@/components/app/pagination";
 
 const FLOW_OPTIONS = [
   { value: "gws_mailbox", label: "Mailbox" },
@@ -124,6 +125,8 @@ const columns = [
   }),
 ];
 
+const SEARCH_DEBOUNCE_MS = 400;
+
 export function Tickets() {
   const [filters, setFilters] = useState<TicketFilters>({ page: 1, pageSize: 25 });
   const [search, setSearch] = useState("");
@@ -145,12 +148,19 @@ export function Tickets() {
     setFilters((f) => ({ ...f, q: search, page: 1 }));
   }
 
+  // Type-and-narrow, same feel as every other search box in the dashboard --
+  // Enter/the Search button still apply instantly for anyone who prefers that.
+  useEffect(() => {
+    const timer = setTimeout(applySearch, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
   function handleExport() {
     if (!data?.results.length) return;
     exportToExcel(ticketsToExcelRows(data.results), "tickets-export");
   }
 
-  const totalPages = data ? Math.ceil(data.total / (filters.pageSize ?? 25)) : 0;
   const currentPage = filters.page ?? 1;
 
   return (
@@ -281,47 +291,13 @@ export function Tickets() {
 
       {/* Pagination */}
       {data && (
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Showing{" "}
-            <span className="font-semibold text-slate-900">
-              {(currentPage - 1) * (filters.pageSize ?? 25) + 1}–
-              {Math.min(currentPage * (filters.pageSize ?? 25), data.total)}
-            </span>{" "}
-            of <span className="font-semibold text-slate-900">{data.total}</span> tickets
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage <= 1}
-              onClick={() => setFilters((f) => ({ ...f, page: currentPage - 1 }))}
-              className="h-7 text-xs"
-            >
-              Previous
-            </Button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-              <Button
-                key={p}
-                variant={p === currentPage ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setFilters((f) => ({ ...f, page: p }))}
-                className="h-7 w-7 text-xs p-0"
-              >
-                {p}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => setFilters((f) => ({ ...f, page: currentPage + 1 }))}
-              className="h-7 text-xs"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          page={currentPage}
+          pageSize={filters.pageSize ?? 25}
+          total={data.total}
+          onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
+          itemLabel="tickets"
+        />
       )}
       </div>
     </div>

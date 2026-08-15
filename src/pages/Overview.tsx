@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { format, parse, isValid } from "date-fns";
@@ -18,25 +18,16 @@ import { toast } from "@/components/ui/toast";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/app/preset-picker";
-import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob, getEmployeeSearchSuggestions } from "@/api";
+import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob } from "@/api";
 import type { EmployeeSearchResult } from "@/api";
 import { formatISTShort, describeCron } from "@/lib/utils";
+import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
+import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
 
-const GLOBAL_SEARCH_DEBOUNCE_MS = 250;
-
-type Preset = "today" | "7d" | "30d";
-const PRESET_LABELS: Record<Preset, string> = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days" };
-
-function fmt(d: Date) { return d.toISOString().split("T")[0]; }
 function parseYMD(s: string | undefined): Date | undefined {
   if (!s) return undefined;
   const d = parse(s, "yyyy-MM-dd", new Date());
   return isValid(d) ? d : undefined;
-}
-function getPresetDates(p: Preset) {
-  const today = new Date(), todayStr = fmt(today);
-  const ago = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return fmt(d); };
-  return p === "today" ? { from: todayStr, to: todayStr } : p === "7d" ? { from: ago(7), to: todayStr } : { from: ago(30), to: todayStr };
 }
 
 // trendKey names the matching field in kpis.previousPeriod -- a real
@@ -174,37 +165,9 @@ function JobStatus({ status }: { status?: string }) {
 // employee resolved from the matched ticket, straight to the ticket itself.
 function GlobalSearchBox() {
   const [value, setValue] = useState("");
-  const [suggestions, setSuggestions] = useState<EmployeeSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const requestId = useRef(0);
+  const { suggestions, loading } = useEmployeeSuggestions(value);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (value.trim().length <= 2) {
-      setSuggestions([]);
-      setLoading(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      const thisRequest = ++requestId.current;
-      setLoading(true);
-      getEmployeeSearchSuggestions(value.trim())
-        .then((res) => {
-          if (requestId.current !== thisRequest) return;
-          setSuggestions(res.results);
-        })
-        .catch(() => {
-          if (requestId.current !== thisRequest) return;
-          setSuggestions([]);
-        })
-        .finally(() => {
-          if (requestId.current !== thisRequest) return;
-          setLoading(false);
-        });
-    }, GLOBAL_SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [value]);
 
   function goTo(result: EmployeeSearchResult) {
     setShowSuggestions(false);
@@ -255,10 +218,10 @@ function GlobalSearchBox() {
 }
 
 export function Overview() {
-  const [preset, setPreset]         = useState<Preset | "custom">("7d");
+  const [preset, setPreset]         = useState<DatePreset>("7d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo]     = useState("");
-  const dates = preset === "custom" ? { from: customFrom, to: customTo } : getPresetDates(preset as Preset);
+  const dates = preset === "custom" ? { from: customFrom, to: customTo } : getPresetDates(preset);
 
   const kpis     = useQuery({ queryKey: ["kpis",     dates], queryFn: () => getKpis(dates) });
   const anomalies = useQuery({ queryKey: ["anomalies", "overview", dates], queryFn: () => getAnomalies(dates) });
@@ -306,11 +269,7 @@ export function Overview() {
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <GlobalSearchBox />
-          <PresetPicker
-            options={(["today", "7d", "30d"] as Preset[]).map((p) => ({ key: p, label: PRESET_LABELS[p] }))}
-            value={preset as Preset}
-            onChange={setPreset}
-          />
+          <PresetPicker options={DATE_PRESETS} value={preset} onChange={setPreset} />
           <DatePickerWithRange
             value={{ from: parseYMD(dates.from), to: parseYMD(dates.to) }}
             onChange={(range: DateRange | undefined) => {

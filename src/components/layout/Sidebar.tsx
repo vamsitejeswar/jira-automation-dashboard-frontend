@@ -42,11 +42,11 @@ export function Sidebar() {
     <aside className="flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 border-b border-slate-100">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-lg flex-shrink-0">
+        <div className="flex not-only:items-center justify-center rounded-lgflex-shrink-0">
           <img
             src="/Jira_Logo.svg"
             alt="Jira Automation"
-            className="h-8 w-8 object-contain"
+            className="h-14 w-14 object-contain"
           />
         </div>
         <div className="min-w-0">
@@ -98,13 +98,13 @@ export function Sidebar() {
           ) : (
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0">
               <span className="text-xs font-bold text-blue-600">
-                {(me.data?.email ?? "?").charAt(0).toUpperCase()}
+                {(me.data?.name ?? me.data?.email ?? "?").charAt(0).toUpperCase()}
               </span>
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-slate-900 truncate">{me.data?.email ?? "..."}</p>
-            <p className="text-[10px] truncate text-slate-400">Administrator</p>
+            <p className="text-xs font-medium text-slate-900 truncate">{me.data?.name ?? me.data?.email ?? "..."}</p>
+            <p className="text-[10px] truncate text-slate-400">{me.data?.name ? me.data.email : "Administrator"}</p>
           </div>
           <button
             onClick={handleLogout}

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
-  Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
+  Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, Activity, AlertTriangle, Play, Loader2,
   ArrowUpRight, Search,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
@@ -38,14 +38,15 @@ function getPresetDates(p: Preset) {
   return p === "today" ? { from: todayStr, to: todayStr } : p === "7d" ? { from: ago(7), to: todayStr } : { from: ago(30), to: todayStr };
 }
 
+// No trend arrows here -- an earlier version showed hardcoded +12%/+4%/-3%
+// on every load regardless of real data, which is worse than showing
+// nothing. Restore a trend once real day-over-day/week-over-week
+// aggregation exists; until then these are plain counts.
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"    as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", trend: +12, sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "offboardedCount"   as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", trend: +4,  sub: "Employees",              viewTo: "/tickets" },
-  // Akamai Clones was often just 0 and told an admin nothing actionable --
-  // pendingApprovals (live, not date-ranged) does: it's exactly how many
-  // Mail Approval tickets are stuck waiting on a manager reply right now.
-  { dataKey: "pendingApprovals"  as const, label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals" },
-  { dataKey: "failuresCount"     as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", trend: -3,  sub: "Need attention",         viewTo: "/anomalies" },
+  { dataKey: "onboardedCount"    as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "offboardedCount"   as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "pendingApprovals"  as const, label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
+  { dataKey: "failuresCount"     as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
 ];
 
 /* ── Skeletons ──────────────────────────────────────────────── */
@@ -101,13 +102,10 @@ function OverviewSkeleton() {
 }
 
 /* ── KPI tile ───────────────────────────────────────────────── */
-function KpiTile({ label, value, icon: Icon, accent, lightBg, trend, sub, viewTo }: {
+function KpiTile({ label, value, icon: Icon, accent, lightBg, live, sub, viewTo }: {
   label: string; value: number; icon: React.ElementType;
-  accent: string; lightBg: string; trend?: number; sub: string; viewTo: string;
+  accent: string; lightBg: string; live?: boolean; sub: string; viewTo: string;
 }) {
-  const up = (trend ?? 0) >= 0;
-  const TI = up ? TrendingUp : TrendingDown;
-  const tc = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
     <div className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
       <div className="h-1" style={{ background: accent }} />
@@ -122,15 +120,7 @@ function KpiTile({ label, value, icon: Icon, accent, lightBg, trend, sub, viewTo
             <Icon className="h-5 w-5" style={{ color: accent }} />
           </div>
         </div>
-        {trend !== undefined ? (
-          <div className="mt-4 flex items-center gap-1.5 text-xs">
-            <TI className="h-3.5 w-3.5" style={{ color: tc }} />
-            <span className="font-semibold" style={{ color: tc }}>{up ? "+" : ""}{trend}%</span>
-            <span className="text-slate-400">vs last period</span>
-          </div>
-        ) : (
-          <div className="mt-4 text-xs text-slate-400">Live count, not date-ranged</div>
-        )}
+        <div className="mt-4 text-xs text-slate-400">{live ? "Live count, not date-ranged" : "For the selected date range"}</div>
       </div>
       <div className="border-t border-slate-100 px-5 py-2.5">
         <Link to={viewTo} className="flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: accent }}>
@@ -141,8 +131,22 @@ function KpiTile({ label, value, icon: Icon, accent, lightBg, trend, sub, viewTo
   );
 }
 
-function JobDot({ state }: { state: string }) {
-  return <span className={`inline-flex h-2 w-2 rounded-full flex-shrink-0 ${state === "ENABLED" ? "bg-emerald-500" : "bg-amber-400"}`} />;
+// Reflects the job's own last real outcome, not just whether Cloud
+// Scheduler itself has it enabled -- an enabled job silently failing every
+// night used to look identical (both just a green dot) to a healthy one.
+const JOB_STATUS_META: Record<string, { dot: string; label: string; text: string }> = {
+  succeeded: { dot: "bg-emerald-500", label: "Succeeded", text: "text-emerald-700" },
+  failed:    { dot: "bg-red-500",     label: "Failed",    text: "text-red-700" },
+  unknown:   { dot: "bg-slate-300",   label: "No runs yet", text: "text-slate-400" },
+};
+function JobStatus({ status }: { status?: string }) {
+  const meta = JOB_STATUS_META[status ?? "unknown"] ?? JOB_STATUS_META.unknown;
+  return (
+    <span className={`flex items-center gap-1.5 text-xs font-medium ${meta.text}`}>
+      <span className={`inline-flex h-2 w-2 rounded-full flex-shrink-0 ${meta.dot}`} />
+      {meta.label}
+    </span>
+  );
 }
 
 /* ── Page ───────────────────────────────────────────────────── */
@@ -249,6 +253,28 @@ export function Overview() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["scheduled-jobs"] }),
   });
 
+  // "Needs your attention" -- named, linked items instead of a bare count,
+  // built entirely from data this page already fetches (no extra request).
+  // A failed job's own last real run outweighs Cloud Scheduler's own
+  // enabled/paused state, which is why this reads job.lastRunStatus, not
+  // job.state.
+  const failedJobs = (jobs.data?.jobs ?? []).filter((j) => j.lastRunStatus === "failed");
+  const attentionItems: { text: string; to: string }[] = [];
+  failedJobs.forEach((j) => attentionItems.push({ text: `"${j.label}" failed its last run`, to: "/schedules" }));
+  if (kpis.data && kpis.data.pendingApprovals > 0) {
+    attentionItems.push({
+      text: `${kpis.data.pendingApprovals} approval${kpis.data.pendingApprovals === 1 ? "" : "s"} waiting on a manager`,
+      to: "/approvals",
+    });
+  }
+  if (kpis.data && kpis.data.failuresCount > 0) {
+    attentionItems.push({
+      text: `${kpis.data.failuresCount} failure${kpis.data.failuresCount === 1 ? "" : "s"} in the selected period`,
+      to: "/anomalies",
+    });
+  }
+  const systemHealthy = attentionItems.length === 0;
+
   return (
     <div className="min-h-full bg-slate-50">
       {/* Header — always visible */}
@@ -282,8 +308,34 @@ export function Overview() {
         <div className="px-8 py-6"><ErrorState error={kpis.error as Error} onRetry={kpis.refetch} /></div>
       ) : (
         <div className="px-4 py-4 space-y-4">
+          {/* System status + needs-attention -- the one-sentence answer to
+              "is this healthy right now," before any other detail. */}
+          <div
+            className={`rounded-xl border px-5 py-4 shadow-sm ${
+              systemHealthy ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0 ${systemHealthy ? "bg-emerald-500" : "bg-amber-500"}`} />
+              <p className={`text-sm font-bold ${systemHealthy ? "text-emerald-800" : "text-amber-800"}`}>
+                {systemHealthy ? "Healthy — nothing needs you right now" : "Needs your attention"}
+              </p>
+            </div>
+            {!systemHealthy && (
+              <ul className="mt-2.5 space-y-1.5">
+                {attentionItems.map((item, i) => (
+                  <li key={i}>
+                    <Link to={item.to} className="text-sm font-medium text-amber-800 hover:underline">
+                      {item.text} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {KPI_CONFIG.map((c) => <KpiTile key={c.dataKey} label={c.label} icon={c.icon} accent={c.accent} lightBg={c.lightBg} trend={c.trend} sub={c.sub} viewTo={c.viewTo} value={kpis.data![c.dataKey]} />)}
+            {KPI_CONFIG.map((c) => <KpiTile key={c.dataKey} label={c.label} icon={c.icon} accent={c.accent} lightBg={c.lightBg} live={c.live} sub={c.sub} viewTo={c.viewTo} value={kpis.data![c.dataKey]} />)}
           </div>
 
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
@@ -382,7 +434,7 @@ export function Overview() {
                     const isRunningThis = forceRun.isPending && forceRun.variables === job.name;
                     return (
                     <li key={job.name} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/70 transition-colors">
-                      <JobDot state={job.state} />
+                      <div className="w-24 shrink-0"><JobStatus status={job.lastRunStatus} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="truncate text-sm font-semibold text-slate-800">{job.label}</p>

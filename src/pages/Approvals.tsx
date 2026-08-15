@@ -159,6 +159,21 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
       };
 }
 
+// A ticket sent 10 minutes ago and one waiting 5 days used to look
+// identical unless you read the reminder count -- this is the first thing
+// that should catch the eye instead of something you have to compute.
+function WaitingAge({ since }: { since: string | null }) {
+  if (!since) return null;
+  const days = Math.floor((Date.now() - new Date(since).getTime()) / 86_400_000);
+  if (days < 1) return <span className="text-[11px] font-medium text-slate-400">just now</span>;
+  const urgent = days >= 3;
+  return (
+    <span className={`text-[11px] font-semibold ${urgent ? "text-red-600" : "text-slate-400"}`}>
+      waiting {days}d
+    </span>
+  );
+}
+
 function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a: PendingAction) => void }) {
   return (
     <tr className="hover:bg-slate-50 transition-colors">
@@ -174,7 +189,10 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
         <FlowBadge flow={approval.flow} />
       </td>
       <td className="px-5 py-3">
-        <StatusBadge status={approval.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={approval.status} />
+          {approval.status === "pending" && <WaitingAge since={approval.updatedAt} />}
+        </div>
       </td>
       <td className="px-5 py-3 text-xs text-slate-600 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
       <td className="px-5 py-3 text-xs text-slate-600 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>

@@ -189,6 +189,11 @@ export const ScheduledJobSchema = z.object({
   state: z.string(),
   nextRunAt: z.string(),
   lastRunAt: z.string().nullable(),
+  // Only set by the jobs-list endpoint (not the force-run response) --
+  // whether this job's own last real work succeeded, not just whether
+  // Cloud Scheduler itself is enabled/paused. "unknown" when nothing's
+  // logged yet in the lookback window.
+  lastRunStatus: z.enum(["succeeded", "failed", "unknown"]).optional(),
 });
 export type ScheduledJob = z.infer<typeof ScheduledJobSchema>;
 

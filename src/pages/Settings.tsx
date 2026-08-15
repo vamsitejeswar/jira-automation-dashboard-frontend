@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Zap, Mail, UserPlus, RefreshCw, Shield, UserMinus, HardDrive, UserX, Laptop } from "lucide-react";
+import { AlertTriangle, Zap, RefreshCw, Check, X, ArrowRightLeft } from "lucide-react";
+import {
+  GoogleIcon, GoogleDriveIcon, GmailIcon, Microsoft365Icon,
+  ActiveDirectoryIcon, AkamaiIcon, AutomationIcon,
+} from "@/components/app/brand-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
@@ -44,15 +48,42 @@ const DESCRIPTIONS: Record<ToggleName, string> = {
 };
 
 const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
-  automation_enabled:           Zap,
-  email_sending_enabled:        Mail,
-  gws_account_creation_enabled: UserPlus,
+  automation_enabled:           AutomationIcon,
+  email_sending_enabled:        GmailIcon,
+  gws_account_creation_enabled: GoogleIcon,
   retry_on_update_enabled:      RefreshCw,
-  akamai_enabled:               Shield,
-  gws_account_suspend_enabled:  UserMinus,
-  data_transfer_enabled:        HardDrive,
-  ad_disable_enabled:           UserX,
-  m365_disable_enabled:         Laptop,
+  akamai_enabled:               AkamaiIcon,
+  gws_account_suspend_enabled:  GoogleIcon,
+  data_transfer_enabled:        GoogleDriveIcon,
+  ad_disable_enabled:           ActiveDirectoryIcon,
+  m365_disable_enabled:         Microsoft365Icon,
+};
+
+// Real fixed-color logos/icons -- recoloring them via the row's accent would
+// misrepresent the actual mark, so they're drawn at full size with no tint
+// applied, unlike the single generic (currentColor) icon below.
+const BRAND_LOGO_ICONS = new Set<React.ElementType>([
+  GoogleIcon, GoogleDriveIcon, GmailIcon, Microsoft365Icon, ActiveDirectoryIcon, AkamaiIcon, AutomationIcon,
+]);
+
+// A small corner badge on top of the vendor logo, so it's clear at a glance
+// whether this toggle creates/enables something on that system, disables/
+// suspends it, or (Drive) moves data between accounts -- the logo alone
+// doesn't say which direction the action goes.
+type BadgeKind = "enable" | "disable" | "transfer";
+
+const TOGGLE_BADGE: Partial<Record<ToggleName, BadgeKind>> = {
+  gws_account_creation_enabled: "enable",
+  gws_account_suspend_enabled:  "disable",
+  ad_disable_enabled:           "disable",
+  m365_disable_enabled:         "disable",
+  data_transfer_enabled:        "transfer",
+};
+
+const BADGE_META: Record<BadgeKind, { bg: string; Icon: React.ElementType }> = {
+  enable:   { bg: "#16a34a", Icon: Check },
+  disable:  { bg: "#dc2626", Icon: X },
+  transfer: { bg: "#2563eb", Icon: ArrowRightLeft },
 };
 
 const TOGGLE_ACCENT: Record<ToggleName, string> = {
@@ -102,7 +133,10 @@ function ToggleRow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const Icon   = TOGGLE_ICONS[toggle.name] ?? Zap;
   const accent = TOGGLE_ACCENT[toggle.name] ?? "#2563eb";
+  const isBrandLogo = BRAND_LOGO_ICONS.has(Icon);
   const isMaster = toggle.name === "automation_enabled";
+  const badgeKind = TOGGLE_BADGE[toggle.name];
+  const Badge = badgeKind ? BADGE_META[badgeKind] : null;
 
   function handleChange(newVal: boolean) {
     if (isMaster && !newVal) {
@@ -119,11 +153,19 @@ function ToggleRow({
       }`}
     >
       {/* Icon */}
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5"
-        style={{ background: accent + "18" }}
-      >
-        <Icon className="h-4 w-4" style={{ color: accent }} />
+      <div className="relative flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
+        <Icon
+          className={isBrandLogo ? "h-6 w-6" : "h-5 w-5"}
+          style={isBrandLogo ? undefined : { color: accent }}
+        />
+        {Badge && (
+          <span
+            className="absolute -bottom-0 -right-0 flex h-3 w-3 items-center justify-center rounded-full ring-2 ring-white"
+            style={{ background: Badge.bg }}
+          >
+            <Badge.Icon className="h-2 w-2 text-white" strokeWidth={3} />
+          </span>
+        )}
       </div>
 
       {/* Content */}
@@ -190,7 +232,7 @@ function ToggleRow({
 
 function SettingsSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-6 max-w-3xl">
+    <div className="px-4 py-4 space-y-4 max-w-3xl">
       {SECTIONS.map(({ title, names }) => (
         <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 space-y-1.5">

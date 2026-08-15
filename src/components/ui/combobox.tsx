@@ -64,7 +64,7 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           className={cn(
-            "z-50 max-h-80 w-(--anchor-width) min-w-48 origin-(--transform-origin) overflow-y-auto rounded-md border border-slate-200 bg-popover p-1 text-popover-foreground shadow-lg outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 dark:border-slate-800",
+            "z-50 max-h-80 w-(--anchor-width) min-w-48 origin-(--transform-origin) overflow-y-auto rounded-md border border-slate-200 bg-popover p-1 text-popover-foreground shadow-lg outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 dark:border-neutral-800",
             className
           )}
           {...props}

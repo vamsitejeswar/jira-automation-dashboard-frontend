@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* Class-based dark mode (Tailwind v4 defaults to prefers-color-scheme
    media queries) so `dark:` only fires when ThemeProvider puts `.dark` on

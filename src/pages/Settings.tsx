@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTab, TabsIndicator, TabsPanel } from "@/components/ui/tabs";
 import { getToggles, updateToggle, getConfig, updateConfig } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -146,7 +150,7 @@ function ToggleRow({
 
   return (
     <div
-      className={`flex items-start gap-4 px-5 py-4 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50`}
+      className={`flex items-start gap-4 px-5 py-4 transition-colors hover:bg-slate-50/80 dark:hover:bg-neutral-800/50`}
     >
       {/* Icon */}
       <div className="relative flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
@@ -160,14 +164,14 @@ function ToggleRow({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          <span className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
             {TOGGLE_LABELS[toggle.name] ?? toggle.name}
           </span>
 
         </div>
-        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-slate-400">{DESCRIPTIONS[toggle.name]}</p>
+        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-neutral-400">{DESCRIPTIONS[toggle.name]}</p>
         {toggle.lastChangedAt && (
-          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
             Last changed {formatIST(toggle.lastChangedAt)}
             {toggle.lastChangedBy ? ` by ${toggle.lastChangedBy}` : ""}
           </p>
@@ -239,8 +243,8 @@ function ConfigRow({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{config.label}</p>
-        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-slate-400">{config.description}</p>
+        <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{config.label}</p>
+        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-neutral-400">{config.description}</p>
         <div className="mt-2 flex items-center gap-2">
           <Input
             value={value}
@@ -248,14 +252,27 @@ function ConfigRow({
             placeholder="Not set"
             className="h-8 text-xs max-w-sm"
           />
-          <Button
-            size="sm"
-            className="h-8 text-xs"
-            disabled={!dirty || isPending}
-            onClick={() => onSave(config.name, value)}
-          >
-            Save
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" className="h-8 text-xs" disabled={!dirty || isPending}>
+                Save
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Save {config.label}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This updates the live value used by automation immediately.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onSave(config.name, value)}>
+                  Save
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
@@ -266,7 +283,7 @@ function GeneralSkeleton() {
   return (
     <div className="space-y-4">
       {SECTIONS.map(({ title, names }) => (
-        <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-slate-900">
+        <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
           <div className="px-5 py-4 space-y-1.5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-56" />
@@ -291,7 +308,7 @@ function GeneralSkeleton() {
 
 function ConfigSkeleton() {
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900 divide-y divide-slate-100 dark:divide-neutral-800">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="flex items-start gap-4 px-5 py-4">
           <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0 mt-0.5" />
@@ -349,12 +366,12 @@ function GeneralTab() {
   return (
     <div className="space-y-4">
       {SECTIONS.map(({ title, subtitle, names }) => (
-        <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
+        <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
           <div className="px-5 py-4">
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
-            <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">{subtitle}</p>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{title}</h2>
+            <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">{subtitle}</p>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-100 dark:divide-neutral-800">
             {names.map((name) => {
               const toggle = toggleMap[name];
               if (!toggle) return null;
@@ -400,14 +417,14 @@ function ConfigTab() {
   if (isError) return <ErrorState error={error as Error} />;
 
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
       <div className="px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Config</h2>
-        <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
-          Changes take effect immediately -- no redeploy needed.
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Config</h2>
+        <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">
+          Changes take effect immediately.
         </p>
       </div>
-      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+      <div className="divide-y divide-slate-100 dark:divide-neutral-800">
         {(data?.config ?? []).map((config) => (
           <ConfigRow
             key={config.name}
@@ -423,19 +440,19 @@ function ConfigTab() {
 
 function AppearanceTab() {
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
       <div className="px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Appearance</h2>
-        <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">How the dashboard looks on this device</p>
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Appearance</h2>
+        <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">How the dashboard looks on this device</p>
       </div>
-      <div className="flex items-start gap-4 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+      <div className="flex items-start gap-4 px-5 py-4 border-t border-slate-100 dark:border-neutral-800">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
           <SunMoon className="h-5 w-5" style={{ color: "#4338ca" }} />
         </div>
         <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Theme</p>
-            <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-slate-400">Light, dark, or match your system setting.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Theme</p>
+            <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-neutral-400">Light, dark, or match your system setting.</p>
           </div>
           <ThemeToggle />
         </div>
@@ -446,11 +463,11 @@ function AppearanceTab() {
 
 export function Settings() {
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white px-8 py-6 dark:bg-slate-900">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-slate-100">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <div className="border-b bg-white px-8 py-6 dark:bg-neutral-900">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-neutral-100">Settings</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
           Automation features, contact addresses, and how the dashboard looks.
         </p>
       </div>

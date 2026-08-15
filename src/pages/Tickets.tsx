@@ -76,14 +76,14 @@ const columns = [
     header: "Title",
     cell: (info) => {
       const value = info.getValue();
-      if (!value) return <span className="text-xs text-slate-400 dark:text-slate-500">—</span>;
+      if (!value) return <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>;
       return (
         <HoverCard>
           <HoverCardTrigger
             delay={200}
             closeDelay={100}
             render={
-              <span className="text-xs text-slate-700 dark:text-slate-300 line-clamp-1 max-w-64 cursor-default">
+              <span className="text-xs text-slate-700 dark:text-neutral-300 line-clamp-1 max-w-64 cursor-default">
                 {value}
               </span>
             }
@@ -114,13 +114,13 @@ const columns = [
   col.accessor("employeeEmail", {
     header: "Employee",
     cell: (info) => (
-      <span className="text-xs text-slate-600 dark:text-slate-400">{info.getValue() ?? "—"}</span>
+      <span className="text-xs text-slate-600 dark:text-neutral-400">{info.getValue() ?? "—"}</span>
     ),
   }),
   col.accessor("updatedAt", {
     header: "Last Updated",
     cell: (info) => (
-      <span className="tabular-nums text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
+      <span className="tabular-nums text-xs text-slate-600 dark:text-neutral-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
     ),
   }),
 ];
@@ -164,13 +164,13 @@ export function Tickets() {
   const currentPage = filters.page ?? 1;
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Tickets</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Tickets</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
               All onboarding &amp; offboarding tickets
             </p>
           </div>
@@ -189,7 +189,7 @@ export function Tickets() {
         {/* Filters */}
         <div className="mt-5 flex flex-wrap gap-2 items-center">
                     <div className="relative flex-1 min-w-44">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               placeholder="Issue key or email..."
               className="pl-8 h-9 text-xs"
@@ -256,13 +256,13 @@ export function Tickets() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-slate-50 dark:bg-slate-950">
+              <thead className="border-b bg-slate-50 dark:bg-neutral-950">
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
                     {hg.headers.map((h) => (
                       <th
                         key={h.id}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap"
                       >
                         {flexRender(h.column.columnDef.header, h.getContext())}
                       </th>
@@ -270,11 +270,11 @@ export function Tickets() {
                   </tr>
                 ))}
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
                 {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-4 py-3">

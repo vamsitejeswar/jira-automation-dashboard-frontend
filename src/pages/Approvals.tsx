@@ -100,7 +100,7 @@ function StatusBadge({ status }: { status: ApprovalStatus }) {
 function ApprovalsSkeleton() {
   return (
     <div>
-      <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
         <div className="px-5 py-4 space-y-1.5">
           <Skeleton className="h-4 w-44" />
           <Skeleton className="h-3 w-24" />
@@ -175,10 +175,10 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
 function WaitingAge({ since }: { since: string | null }) {
   if (!since) return null;
   const days = Math.floor((Date.now() - new Date(since).getTime()) / 86_400_000);
-  if (days < 1) return <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">just now</span>;
+  if (days < 1) return <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500">just now</span>;
   const urgent = days >= 3;
   return (
-    <span className={`text-[11px] font-semibold ${urgent ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-slate-500"}`}>
+    <span className={`text-[11px] font-semibold ${urgent ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-neutral-500"}`}>
       waiting {days}d
     </span>
   );
@@ -186,7 +186,7 @@ function WaitingAge({ since }: { since: string | null }) {
 
 function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a: PendingAction) => void }) {
   return (
-    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+    <tr className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
       <td className="px-5 py-3 whitespace-nowrap">
         <Link
           to={`/tickets/${approval.issueKey}`}
@@ -204,9 +204,9 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
           {approval.status === "pending" && <WaitingAge since={approval.updatedAt} />}
         </div>
       </td>
-      <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
-      <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>
-      <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+      <td className="px-5 py-3 text-xs text-slate-600 dark:text-neutral-400 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
+      <td className="px-5 py-3 text-xs text-slate-600 dark:text-neutral-400 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>
+      <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
         {formatIST(approval.updatedAt)}
       </td>
       <td className="px-5 py-3 whitespace-nowrap">
@@ -216,7 +216,7 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
               <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
                 Actions
                 {approval.reminderCount > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-1 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 px-1 text-[10px] font-semibold text-slate-600 dark:text-neutral-400">
                     {approval.reminderCount}
                   </span>
                 )}
@@ -235,7 +235,7 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+          <span className="text-xs text-slate-300 dark:text-neutral-600">—</span>
         )}
       </td>
     </tr>
@@ -348,13 +348,13 @@ export function Approvals() {
 
   return (
     <TooltipProvider delay={200}>
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Approvals</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Approvals</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
               Mail Approval tickets — Akamai Access setup and Drive Transfer requests awaiting or resolved
               via a manager decision email.
             </p>
@@ -372,7 +372,7 @@ export function Approvals() {
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     status === tab.key
                       ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
                   }`}
                 >
                   {tab.label}
@@ -388,7 +388,7 @@ export function Approvals() {
             })}
           </div>
           <div className="relative ml-auto w-64">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               type="text"
               placeholder="Search issue, employee, manager..."
@@ -407,18 +407,18 @@ export function Approvals() {
         ) : isError ? (
           <ErrorState error={error as Error} onRetry={refetch} />
         ) : (
-          <div className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+          <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
             <div className="px-5 py-4 flex items-center gap-2">
-              <MailCheck className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Mail Approval tickets</h2>
-              <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium">{data!.total} total</span>
+              <MailCheck className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Mail Approval tickets</h2>
+              <span className="ml-auto text-xs text-slate-400 dark:text-neutral-500 font-medium">{data!.total} total</span>
             </div>
             {rows.length === 0 ? (
               <EmptyState message="No approvals to show for this filter" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-slate-50/70 dark:bg-slate-800/50">
+                  <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
                     <tr>
                       {COLUMNS.map((col) => (
                         <th
@@ -427,19 +427,19 @@ export function Approvals() {
                           onClick={() => toggleSort(col.key)}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 group-hover:text-slate-700 dark:group-hover:text-neutral-300 transition-colors">
                               {col.label}
                             </span>
                             <SortIcon field={col.key} />
                           </div>
                         </th>
                       ))}
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
                     {rows.map((a) => (
                       <ApprovalRow key={a.issueKey} approval={a} onAction={setPendingAction} />
                     ))}
@@ -480,17 +480,17 @@ export function Approvals() {
                     )}
                     {showCloneSuggestions && cloneSuggestions.length > 0 && (
                       <ul
-                        className="absolute z-10 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg border bg-white dark:bg-slate-900 shadow-lg"
+                        className="absolute z-10 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg border bg-white dark:bg-neutral-900 shadow-lg"
                         onMouseDown={(e) => e.preventDefault()}
                       >
                         {cloneSuggestions.map((u) => (
                           <li
                             key={u.email}
                             onClick={() => { setCloneFromEmail(u.email); setShowCloneSuggestions(false); }}
-                            className="flex items-center justify-between gap-3 px-3.5 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b last:border-b-0"
+                            className="flex items-center justify-between gap-3 px-3.5 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/50 border-b last:border-b-0"
                           >
-                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{u.name}</span>
-                            <span className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</span>
+                            <span className="text-sm text-slate-700 dark:text-neutral-300 truncate">{u.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-neutral-500 truncate">{u.email}</span>
                           </li>
                         ))}
                       </ul>

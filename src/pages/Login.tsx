@@ -42,13 +42,13 @@ export function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
-      <div className="w-full max-w-sm rounded-2xl border bg-white dark:bg-slate-900 p-8 shadow-sm text-center">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-neutral-950 px-4">
+      <div className="w-full max-w-sm rounded-2xl border bg-white dark:bg-neutral-900 p-8 shadow-sm text-center">
         <div className="mx-auto flex items-center justify-center rounded-xl">
           <img src="/Jira_Logo.svg" alt="Jira Automation" className="h-28 w-28 object-contain" />
         </div>
-        <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-slate-100">Jira Automation Dashboard</h1>
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Sign in with your work Google account to continue.</p>
+        <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-neutral-100">Jira Automation Dashboard</h1>
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-neutral-400">Sign in with your work Google account to continue.</p>
 
         {error && (
           <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400">

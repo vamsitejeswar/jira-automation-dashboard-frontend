@@ -55,11 +55,11 @@ export function Schedules() {
   const totalPages = log.data ? Math.max(1, Math.ceil(log.data.total / PAGE_SIZE)) : 1;
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Schedules</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Schedules</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
           Every scheduled job and what happened, ticket by ticket, on each of its runs.
         </p>
 
@@ -99,30 +99,30 @@ export function Schedules() {
 
       <div className="px-4 py-4 space-y-4">
         {/* Run log */}
-        <div className="rounded-xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">
                 {jobs.data?.jobs.find((j) => j.name === selectedJob)?.label ?? "Run log"}
               </h2>
               {selectedJob && (() => {
                 const job = jobs.data?.jobs.find((j) => j.name === selectedJob);
                 if (!job) return null;
                 return (
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">{job.name}</span>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-neutral-400">
+                    <span className="font-mono text-[11px] text-slate-400 dark:text-neutral-500">{job.name}</span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {describeCron(job.schedule, job.timeZone)}
                     </span>
-                    <span className="text-slate-400 dark:text-slate-500">
+                    <span className="text-slate-400 dark:text-neutral-500">
                       {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
                     </span>
                   </p>
                 );
               })()}
             </div>
-            {log.data && <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{log.data.total} events (last 30 days)</span>}
+            {log.data && <span className="shrink-0 text-xs text-slate-400 dark:text-neutral-500">{log.data.total} events (last 30 days)</span>}
           </div>
 
           {!selectedJob ? (
@@ -139,19 +139,19 @@ export function Schedules() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-slate-50/70 dark:bg-slate-800/50">
+                  <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Time</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Ticket</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Flow</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Detail</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Time</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Ticket</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Flow</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Status</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">Detail</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
                     {log.data!.results.map((e, i) => (
-                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-5 py-3 tabular-nums text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatIST(e.timestamp)}</td>
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <td className="px-5 py-3 tabular-nums text-xs text-slate-500 dark:text-neutral-400 whitespace-nowrap">{formatIST(e.timestamp)}</td>
                         <td className="px-5 py-3 whitespace-nowrap">
                           {e.issueKey ? (
                             <HoverCard>
@@ -163,8 +163,8 @@ export function Schedules() {
                                 {e.issueKey}
                               </HoverCardTrigger>
                               <HoverCardContent>
-                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{e.title ?? e.issueKey}</p>
-                                <div className="mt-1.5 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200 truncate">{e.title ?? e.issueKey}</p>
+                                <div className="mt-1.5 space-y-1 text-xs text-slate-500 dark:text-neutral-400">
                                   {e.employeeEmail && <p className="truncate">Employee: {e.employeeEmail}</p>}
                                   {e.managerEmail && <p className="truncate">Manager: {e.managerEmail}</p>}
                                   <p>{formatIST(e.timestamp)}</p>
@@ -172,7 +172,7 @@ export function Schedules() {
                               </HoverCardContent>
                             </HoverCard>
                           ) : (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                            <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
                           )}
                         </td>
                         <td className="px-5 py-3"><FlowBadge flow={e.flow} /></td>
@@ -182,14 +182,14 @@ export function Schedules() {
                             {!isSelfEvidentError(e.outcome) && <SeverityBadge severity={e.severity} />}
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-96 truncate">{e.error ?? "—"}</td>
+                        <td className="px-5 py-3 text-xs text-slate-600 dark:text-neutral-400 max-w-96 truncate">{e.error ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-5 py-3 border-t text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-between px-5 py-3 border-t text-xs text-slate-500 dark:text-neutral-400">
                   <span>Page {page} of {totalPages}</span>
                   <div className="flex items-center gap-1">
                     <Button variant="outline" size="sm" className="h-7 text-xs" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>

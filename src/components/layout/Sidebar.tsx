@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -10,7 +11,9 @@ import {
   MailCheck,
   Settings,
   CalendarClock,
+  LogOut,
 } from "lucide-react";
+import { getMe, logout } from "@/api";
 
 const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Overview" },
@@ -24,6 +27,18 @@ const NAV = [
 ];
 
 export function Sidebar() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  // Already fetched (and cached under the same key) by AuthGate on page
+  // load -- this just reads that cache, no extra request.
+  const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
+
+  async function handleLogout() {
+    await logout();
+    qc.removeQueries({ queryKey: ["me"] });
+    navigate("/login", { replace: true });
+  }
+
   return (
     <aside className="flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200">
       {/* Logo */}
@@ -71,14 +86,21 @@ export function Sidebar() {
       <div className="px-5 py-4 border-t border-slate-100">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0">
-            <span className="text-xs font-bold text-blue-600">A</span>
+            <span className="text-xs font-bold text-blue-600">
+              {(me.data?.email ?? "?").charAt(0).toUpperCase()}
+            </span>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-900 truncate">admin@wohlig.com</p>
-            <p className="text-[10px] truncate text-slate-400">
-              Administrator
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-900 truncate">{me.data?.email ?? "..."}</p>
+            <p className="text-[10px] truncate text-slate-400">Administrator</p>
           </div>
+          <button
+            onClick={handleLogout}
+            title="Sign out"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>

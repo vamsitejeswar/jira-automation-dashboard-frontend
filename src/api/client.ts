@@ -9,6 +9,7 @@ import {
   ScheduledJobsResponseSchema,
   ScheduledJobLogResponseSchema,
   AuditLogResponseSchema,
+  MeSchema,
   EmployeeSearchResponseSchema,
   EmployeeSearchSuggestionsSchema,
   ApprovalsResponseSchema,
@@ -21,23 +22,12 @@ import {
   type ScheduledJob,
   type ScheduledJobLogResponse,
   type AuditLogResponse,
+  type Me,
   type EmployeeSearchResponse,
   type EmployeeSearchSuggestions,
   type ApprovalsResponse,
   type GwsUserSearchResponse,
 } from "./types";
-
-// Shared-secret token the backend's /api/admin/* routes require as
-// "Authorization: Bearer <token>" -- same INTERNAL_TASK_TOKEN the FastAPI
-// backend's .env already has. Not real per-admin auth (one shared secret,
-// no identity) -- that's a separate, later piece of work. Set via
-// VITE_API_TOKEN in .env.local.
-//
-// SECURITY NOTE: Vite inlines both of these into the built JS bundle at
-// build time -- anyone who can load the deployed page can read them out of
-// the JS and call the backend directly. Acceptable only until real
-// per-admin auth (Google OAuth) replaces this shared-token model.
-const API_TOKEN = import.meta.env.VITE_API_TOKEN as string | undefined;
 
 // Real backend URL for a standalone-deployed frontend (no dev proxy to fall
 // back on). Empty by default -- same-origin relative paths, which is what
@@ -51,9 +41,10 @@ async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestIn
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
       ...init?.headers,
     },
+    // Sends the admin_session cookie set by /api/auth/callback (see
+    // app/routers/auth.py) -- real per-admin identity, not a shared token.
     credentials: "include",
   });
   if (!res.ok) {
@@ -202,4 +193,20 @@ export function getAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogResp
   params.set("page", String(filters.page ?? 1));
   params.set("page_size", String(filters.pageSize ?? 50));
   return fetchJSON(AuditLogResponseSchema, `/api/admin/audit-log?${params}`);
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+
+// Full-page navigation, not a fetch -- the OAuth redirect dance only works
+// as top-level browser navigation (see app/routers/auth.py's /login).
+export function loginUrl(): string {
+  return `${API_BASE_URL}/api/auth/login`;
+}
+
+export function getMe(): Promise<Me> {
+  return fetchJSON(MeSchema, `/api/auth/me`);
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
 }

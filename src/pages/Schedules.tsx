@@ -5,13 +5,7 @@ import { Play, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectField } from "@/components/app/select-field";
 import { EmptyState } from "@/components/app/empty-state";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
@@ -65,42 +59,23 @@ export function Schedules() {
         <p className="mt-1 text-sm text-slate-500">
           Every scheduled job and what happened, ticket by ticket, on each of its runs.
         </p>
-      </div>
 
-      <div className="px-4 py-4 space-y-4">
         {/* Job picker */}
         {jobs.isLoading ? (
-          <Skeleton className="h-10 w-full max-w-md rounded-lg" />
+          <Skeleton className="mt-5 h-9 w-full max-w-md rounded-lg" />
         ) : jobs.isError ? (
-          <div className="rounded-xl border bg-white p-4 shadow-sm"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
+          <div className="mt-5 rounded-xl border p-4"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
         ) : jobs.data!.jobs.length === 0 ? (
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
+          <div className="mt-5 rounded-xl border overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              items={Object.fromEntries(jobs.data!.jobs.map((j) => [j.name, j.label]))}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <SelectField
+              options={jobs.data!.jobs.map((j) => ({ value: j.name, label: j.label }))}
+              placeholder="Select a job..."
               value={selectedJob ?? ""}
-              onValueChange={(name) => name && selectJob(name)}
-            >
-              <SelectTrigger className="w-full sm:w-96">
-                <SelectValue placeholder="Select a job..." />
-              </SelectTrigger>
-              <SelectContent>
-                {jobs.data!.jobs.map((job) => (
-                  <SelectItem key={job.name} value={job.name} className="flex-col items-stretch gap-1 py-2 pr-2 pl-2.5">
-                    <p className="pr-6 text-sm font-semibold text-slate-800 truncate">{job.label}</p>
-                    <p className="font-mono text-[11px] text-slate-400 truncate">{job.name}</p>
-                    <p className="flex items-center gap-1 text-xs text-slate-500">
-                      <Clock className="h-3 w-3" />
-                      {describeCron(job.schedule, job.timeZone)}
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
-                    </p>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(v) => v && selectJob(v)}
+              className="w-full sm:w-96"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -117,14 +92,34 @@ export function Schedules() {
             </Button>
           </div>
         )}
+      </div>
 
+      <div className="px-4 py-4 space-y-4">
         {/* Run log */}
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">
-              {jobs.data?.jobs.find((j) => j.name === selectedJob)?.label ?? "Run log"}
-            </h2>
-            {log.data && <span className="text-xs text-slate-400">{log.data.total} events (last 30 days)</span>}
+          <div className="px-5 py-4 border-b flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">
+                {jobs.data?.jobs.find((j) => j.name === selectedJob)?.label ?? "Run log"}
+              </h2>
+              {selectedJob && (() => {
+                const job = jobs.data?.jobs.find((j) => j.name === selectedJob);
+                if (!job) return null;
+                return (
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                    <span className="font-mono text-[11px] text-slate-400">{job.name}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {describeCron(job.schedule, job.timeZone)}
+                    </span>
+                    <span className="text-slate-400">
+                      {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
+                    </span>
+                  </p>
+                );
+              })()}
+            </div>
+            {log.data && <span className="shrink-0 text-xs text-slate-400">{log.data.total} events (last 30 days)</span>}
           </div>
 
           {!selectedJob ? (

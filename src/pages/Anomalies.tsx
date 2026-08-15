@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import { EmptyState } from "@/components/app/empty-state";
 import { SeverityBadge, FlowBadge } from "@/components/app/badges";
 import { getAnomalies } from "@/api";
 import type { AnomalyFilters } from "@/api";
@@ -65,7 +65,7 @@ const SEVERITY_ROW_BG: Record<string, string> = {
 
 function AnomaliesSkeleton() {
   return (
-    <div className="px-8 py-6 space-y-6">
+    <div className="px-4 py-4 space-y-4">
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="rounded-xl bg-white px-5 py-4 shadow-sm flex items-center gap-4">
@@ -271,7 +271,7 @@ export function Anomalies() {
                 <p className="text-xs text-slate-500 mt-0.5">Click columns to sort</p>
               </div>
               {breakdown.length === 0 ? (
-                <Empty message="No anomalies in this period" />
+                <EmptyState message="No anomalies in this period" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -331,7 +331,7 @@ export function Anomalies() {
                 </span>
               </div>
               {events.length === 0 ? (
-                <Empty message="No events to show for this period" />
+                <EmptyState message="No events to show for this period" />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {events.map((a, i) => (

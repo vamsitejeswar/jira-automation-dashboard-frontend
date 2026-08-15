@@ -1,26 +1,26 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Play, Loader2, Clock, ChevronRight } from "lucide-react";
+import { Play, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import { EmptyState } from "@/components/app/empty-state";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { getScheduledJobs, getScheduledJobLog, runScheduledJob } from "@/api";
+import type { ScheduledJob } from "@/api";
 import { formatIST, describeCron } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
-
-function JobsSkeleton() {
-  return (
-    <div className="space-y-2 p-4">
-      {[...Array(5)].map((_, i) => (
-        <Skeleton key={i} className="h-16 w-full rounded-lg" />
-      ))}
-    </div>
-  );
-}
 
 export function Schedules() {
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
@@ -69,61 +69,59 @@ export function Schedules() {
         </p>
       </div>
 
-      <div className="grid gap-4 px-4 py-4 lg:grid-cols-[280px_1fr]">
-        {/* Job list */}
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden h-fit">
-          <div className="px-4 py-3 border-b">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Jobs</h2>
+      <div className="px-4 py-4 space-y-4">
+        {/* Job picker */}
+        {jobs.isLoading ? (
+          <Skeleton className="h-10 w-full max-w-md rounded-lg" />
+        ) : jobs.isError ? (
+          <div className="rounded-xl border bg-white p-4 shadow-sm"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
+        ) : jobs.data!.jobs.length === 0 ? (
+          <div className="rounded-xl border bg-white shadow-sm overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Combobox
+              items={jobs.data!.jobs}
+              value={jobs.data!.jobs.find((j) => j.name === selectedJob) ?? null}
+              onValueChange={(job) => job && selectJob((job as ScheduledJob).name)}
+              itemToStringValue={(job) => (job as ScheduledJob).name}
+              itemToStringLabel={(job) => (job as ScheduledJob).label}
+            >
+              <ComboboxInput placeholder="Select a job..." className="w-full sm:w-96" />
+              <ComboboxContent>
+                <ComboboxEmpty>No jobs found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(job: ScheduledJob) => (
+                    <ComboboxItem key={job.name} value={job} className="flex-col items-stretch gap-1 py-2 pr-2 pl-2.5">
+                      <p className="pr-6 text-sm font-semibold text-slate-800 truncate">{job.label}</p>
+                      <p className="font-mono text-[11px] text-slate-400 truncate">{job.name}</p>
+                      <p className="flex items-center gap-1 text-xs text-slate-500">
+                        <Clock className="h-3 w-3" />
+                        {describeCron(job.schedule, job.timeZone)}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
+                      </p>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              disabled={!selectedJob || (forceRun.isPending && forceRun.variables === selectedJob)}
+              onClick={() => selectedJob && forceRun.mutate(selectedJob)}
+            >
+              {forceRun.isPending && forceRun.variables === selectedJob ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
+              Force run
+            </Button>
           </div>
-          {jobs.isLoading ? (
-            <JobsSkeleton />
-          ) : jobs.isError ? (
-            <div className="p-4"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
-          ) : jobs.data!.jobs.length === 0 ? (
-            <Empty message="No scheduled jobs configured" />
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {jobs.data!.jobs.map((job) => (
-                <button
-                  key={job.name}
-                  onClick={() => selectJob(job.name)}
-                  className={`w-full text-left px-4 py-3 transition-colors ${
-                    selectedJob === job.name ? "bg-blue-50" : "hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{job.label}</p>
-                    <ChevronRight className={`h-3.5 w-3.5 flex-shrink-0 ${selectedJob === job.name ? "text-blue-500" : "text-slate-300"}`} />
-                  </div>
-                  <p className="mt-0.5 font-mono text-[11px] text-slate-400 truncate">{job.name}</p>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                    <Clock className="h-3 w-3" />
-                    {describeCron(job.schedule, job.timeZone)}
-                  </p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">
-                      {job.lastRunAt ? `Last: ${formatIST(job.lastRunAt)}` : "Never run"}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 gap-1 border-emerald-200 bg-emerald-50 px-2 text-[11px] text-emerald-700 hover:bg-emerald-100"
-                      disabled={forceRun.isPending && forceRun.variables === job.name}
-                      onClick={(e) => { e.stopPropagation(); forceRun.mutate(job.name); }}
-                    >
-                      {forceRun.isPending && forceRun.variables === job.name ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Play className="h-3 w-3" />
-                      )}
-                      Force run
-                    </Button>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Run log */}
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
@@ -135,7 +133,7 @@ export function Schedules() {
           </div>
 
           {!selectedJob ? (
-            <Empty message="Select a job to see its run log" />
+            <EmptyState message="Select a job to see its run log" />
           ) : log.isLoading ? (
             <div className="space-y-3 p-5">
               {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
@@ -143,7 +141,7 @@ export function Schedules() {
           ) : log.isError ? (
             <div className="p-5"><ErrorState error={log.error as Error} onRetry={log.refetch} /></div>
           ) : noEventsForThisJob ? (
-            <Empty message="No per-ticket runs logged for this job in the last 30 days. Some jobs (e.g. the weekly anomaly digest) only send a summary email and never touch an individual ticket." />
+            <EmptyState message="No per-ticket runs logged for this job in the last 30 days. Some jobs (e.g. the weekly anomaly digest) only send a summary email and never touch an individual ticket." />
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -163,9 +161,23 @@ export function Schedules() {
                         <td className="px-5 py-3 tabular-nums text-xs text-slate-500 whitespace-nowrap">{formatIST(e.timestamp)}</td>
                         <td className="px-5 py-3 whitespace-nowrap">
                           {e.issueKey ? (
-                            <Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 hover:underline">
-                              {e.issueKey}
-                            </Link>
+                            <HoverCard>
+                              <HoverCardTrigger
+                                render={
+                                  <Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 hover:underline" />
+                                }
+                              >
+                                {e.issueKey}
+                              </HoverCardTrigger>
+                              <HoverCardContent>
+                                <p className="text-sm font-semibold text-slate-800 truncate">{e.title ?? e.issueKey}</p>
+                                <div className="mt-1.5 space-y-1 text-xs text-slate-500">
+                                  {e.employeeEmail && <p className="truncate">Employee: {e.employeeEmail}</p>}
+                                  {e.managerEmail && <p className="truncate">Manager: {e.managerEmail}</p>}
+                                  <p>{formatIST(e.timestamp)}</p>
+                                </div>
+                              </HoverCardContent>
+                            </HoverCard>
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}

@@ -17,7 +17,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { OutcomeBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { getTickets } from "@/api";
@@ -225,7 +225,7 @@ export function Tickets() {
         ) : isError ? (
           <ErrorState error={error as Error} onRetry={refetch} />
         ) : data?.results.length === 0 ? (
-          <Empty message="No tickets match your filters" />
+          <EmptyState message="No tickets match your filters" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

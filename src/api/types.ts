@@ -23,6 +23,11 @@ export const AuditEventSchema = z.object({
   error: z.string().nullable(),
   timestamp: z.string(),
   severity: SeveritySchema,
+  // Only populated where an endpoint does a real Jira title lookup (e.g.
+  // the scheduled-job log) -- absent/null everywhere else.
+  title: z.string().nullable().optional(),
+  employeeEmail: z.string().nullable().optional(),
+  managerEmail: z.string().nullable().optional(),
 }).catchall(z.unknown());
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 

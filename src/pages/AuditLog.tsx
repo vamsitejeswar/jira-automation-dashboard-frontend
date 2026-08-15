@@ -9,7 +9,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import { EmptyState } from "@/components/app/empty-state";
 import { SeverityBadge, FlowBadge } from "@/components/app/badges";
 import { getAuditLog } from "@/api";
 import type { AuditLogFilters } from "@/api";
@@ -156,7 +156,7 @@ export function AuditLog() {
           ) : isError ? (
             <ErrorState error={error as Error} onRetry={refetch} />
           ) : data?.results.length === 0 ? (
-            <Empty message="No log entries match these filters" />
+            <EmptyState message="No log entries match these filters" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

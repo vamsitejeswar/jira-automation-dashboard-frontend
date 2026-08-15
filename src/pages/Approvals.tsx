@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import { EmptyState } from "@/components/app/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -343,7 +343,7 @@ export function Approvals() {
               <span className="ml-auto text-xs text-slate-400 font-medium">{data!.total} total</span>
             </div>
             {rows.length === 0 ? (
-              <Empty message="No approvals to show for this filter" />
+              <EmptyState message="No approvals to show for this filter" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

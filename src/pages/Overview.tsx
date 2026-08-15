@@ -8,7 +8,7 @@ import {
   ArrowUpRight, Search,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
-import { Empty } from "@/components/ui/empty";
+import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,7 +297,7 @@ export function Overview() {
               <span className="text-xs text-slate-400">{dates.from} → {dates.to}</span>
             </div>
             <div className="p-5">
-              {kpis.data!.byDay.length === 0 ? <Empty message="No trend data" /> : <TrendChart data={kpis.data!.byDay} />}
+              {kpis.data!.byDay.length === 0 ? <EmptyState message="No trend data" /> : <TrendChart data={kpis.data!.byDay} />}
             </div>
           </div>
 
@@ -327,7 +327,7 @@ export function Overview() {
               ) : anomalies.isError ? (
                 <div className="px-5 py-3"><ErrorState error={anomalies.error as Error} onRetry={anomalies.refetch} /></div>
               ) : anomalies.data!.anomalies.length === 0 ? (
-                <Empty message="No anomalies in this period" className="py-8" />
+                <EmptyState message="No anomalies in this period" className="py-8" />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {anomalies.data!.anomalies.slice(0, 8).map((a, i) => (
@@ -377,7 +377,7 @@ export function Overview() {
               ) : jobs.isError ? (
                 <div className="px-5 py-3"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
               ) : jobs.data!.jobs.length === 0 ? (
-                <Empty message="No scheduled jobs found" className="py-8" />
+                <EmptyState message="No scheduled jobs found" className="py-8" />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {[...jobs.data!.jobs].sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime()).map((job) => {

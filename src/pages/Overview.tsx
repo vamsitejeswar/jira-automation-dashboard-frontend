@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  Users, UserMinus, Shield, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
+  Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, AlertTriangle, Play, Loader2,
   ArrowUpRight,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
@@ -27,10 +27,13 @@ function getPresetDates(p: Preset) {
 }
 
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"  as const, label: "Onboarded",     icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", trend: +12, sub: "Employees",         viewTo: "/tickets" },
-  { dataKey: "offboardedCount" as const, label: "Offboarded",    icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", trend: +4,  sub: "Employees",         viewTo: "/tickets" },
-  { dataKey: "akamaiClones"    as const, label: "Akamai Clones", icon: Shield,   accent: "#059669", lightBg: "#ecfdf5", trend: +8,  sub: "Access provisioned", viewTo: "/tickets" },
-  { dataKey: "failuresCount"   as const, label: "Failures",      icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", trend: -3,  sub: "Need attention",     viewTo: "/anomalies" },
+  { dataKey: "onboardedCount"    as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", trend: +12, sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "offboardedCount"   as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", trend: +4,  sub: "Employees",              viewTo: "/tickets" },
+  // Akamai Clones was often just 0 and told an admin nothing actionable --
+  // pendingApprovals (live, not date-ranged) does: it's exactly how many
+  // Mail Approval tickets are stuck waiting on a manager reply right now.
+  { dataKey: "pendingApprovals"  as const, label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals" },
+  { dataKey: "failuresCount"     as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", trend: -3,  sub: "Need attention",         viewTo: "/anomalies" },
 ];
 
 /* ── Skeletons ──────────────────────────────────────────────── */
@@ -88,9 +91,9 @@ function OverviewSkeleton() {
 /* ── KPI tile ───────────────────────────────────────────────── */
 function KpiTile({ label, value, icon: Icon, accent, lightBg, trend, sub, viewTo }: {
   label: string; value: number; icon: React.ElementType;
-  accent: string; lightBg: string; trend: number; sub: string; viewTo: string;
+  accent: string; lightBg: string; trend?: number; sub: string; viewTo: string;
 }) {
-  const up = trend >= 0;
+  const up = (trend ?? 0) >= 0;
   const TI = up ? TrendingUp : TrendingDown;
   const tc = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
@@ -107,11 +110,15 @@ function KpiTile({ label, value, icon: Icon, accent, lightBg, trend, sub, viewTo
             <Icon className="h-5 w-5" style={{ color: accent }} />
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-1.5 text-xs">
-          <TI className="h-3.5 w-3.5" style={{ color: tc }} />
-          <span className="font-semibold" style={{ color: tc }}>{up ? "+" : ""}{trend}%</span>
-          <span className="text-slate-400">vs last period</span>
-        </div>
+        {trend !== undefined ? (
+          <div className="mt-4 flex items-center gap-1.5 text-xs">
+            <TI className="h-3.5 w-3.5" style={{ color: tc }} />
+            <span className="font-semibold" style={{ color: tc }}>{up ? "+" : ""}{trend}%</span>
+            <span className="text-slate-400">vs last period</span>
+          </div>
+        ) : (
+          <div className="mt-4 text-xs text-slate-400">Live count, not date-ranged</div>
+        )}
       </div>
       <div className="border-t border-slate-100 px-5 py-2.5">
         <Link to={viewTo} className="flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: accent }}>

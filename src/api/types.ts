@@ -80,10 +80,34 @@ export const KpisSchema = z.object({
   offboardedCount: z.number(),
   akamaiClones: z.number(),
   failuresCount: z.number(),
+  // A live snapshot (Mail Approval tickets currently awaiting a manager
+  // reply), not scoped to the from/to range like the rest of this response.
+  pendingApprovals: z.number(),
   byFlow: z.record(z.number()),
   byDay: z.array(KpisByDaySchema),
 });
 export type Kpis = z.infer<typeof KpisSchema>;
+
+// ── Mail Approvals ─────────────────────────────────────────────────────────────
+export const ApprovalStatusSchema = z.enum(["pending", "approved", "ignored", "no_response", "failed"]);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+export const ApprovalSchema = z.object({
+  issueKey: z.string(),
+  flow: FlowSchema,
+  status: ApprovalStatusSchema,
+  employeeEmail: z.string().nullable(),
+  managerEmail: z.string().nullable(),
+  reminderCount: z.number(),
+  updatedAt: z.string().nullable(),
+});
+export type Approval = z.infer<typeof ApprovalSchema>;
+
+export const ApprovalsResponseSchema = z.object({
+  total: z.number(),
+  results: z.array(ApprovalSchema),
+});
+export type ApprovalsResponse = z.infer<typeof ApprovalsResponseSchema>;
 
 // ── Toggles ────────────────────────────────────────────────────────────────────
 export const ToggleNameSchema = z.enum([

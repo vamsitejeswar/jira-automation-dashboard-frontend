@@ -10,6 +10,7 @@ import {
   AuditLogResponseSchema,
   EmployeeSearchResponseSchema,
   EmployeeSearchSuggestionsSchema,
+  ApprovalsResponseSchema,
   type TicketsResponse,
   type TicketDetail,
   type Kpis,
@@ -19,6 +20,7 @@ import {
   type AuditLogResponse,
   type EmployeeSearchResponse,
   type EmployeeSearchSuggestions,
+  type ApprovalsResponse,
 } from "./types";
 
 // Shared-secret token the backend's /api/admin/* routes require as
@@ -142,6 +144,12 @@ export function getEmployeeProgress(query: string): Promise<EmployeeSearchRespon
 export function getEmployeeSearchSuggestions(query: string): Promise<EmployeeSearchSuggestions> {
   const params = new URLSearchParams({ q: query });
   return fetchJSON(EmployeeSearchSuggestionsSchema, `/api/admin/employees/suggestions?${params}`);
+}
+
+export function getApprovals(status?: string): Promise<ApprovalsResponse> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  return fetchJSON(ApprovalsResponseSchema, `/api/admin/approvals?${params}`);
 }
 
 export interface AuditLogFilters {

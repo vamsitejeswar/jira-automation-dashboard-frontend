@@ -372,7 +372,9 @@ export function EmployeeSearch() {
               }}
             />
             {suggestionsLoading && (
-              <Spinner className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                <Spinner className="h-4 w-4" />
+              </div>
             )}
 
             {showSuggestions && suggestions.length > 0 && (

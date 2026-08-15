@@ -7,6 +7,7 @@ import {
   ScrollText,
   Zap,
   UserSearch,
+  MailCheck,
   Settings,
 } from "lucide-react";
 
@@ -14,6 +15,7 @@ const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Overview" },
   { to: "/tickets", icon: Ticket, label: "Tickets" },
   { to: "/employees", icon: UserSearch, label: "Employee Search" },
+  { to: "/approvals", icon: MailCheck, label: "Approvals" },
   { to: "/anomalies", icon: AlertTriangle, label: "Anomalies" },
   { to: "/audit-log", icon: ScrollText, label: "Audit Log" },
   { to: "/settings", icon: Settings, label: "Settings" },

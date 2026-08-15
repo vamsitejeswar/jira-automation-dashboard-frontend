@@ -305,6 +305,17 @@ export const AutomationDetailSchema = z.object({
 });
 export type AutomationDetail = z.infer<typeof AutomationDetailSchema>;
 
+// ── Integration health ──────────────────────────────────────────────────────────
+const IntegrationStatusSchema = z.enum(["ok", "down", "not_configured"]);
+export const HealthSchema = z.object({
+  jira: IntegrationStatusSchema,
+  googleWorkspace: IntegrationStatusSchema,
+  activeDirectory: IntegrationStatusSchema,
+  microsoft365: IntegrationStatusSchema,
+});
+export type Health = z.infer<typeof HealthSchema>;
+export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>;
+
 // ── Auth ───────────────────────────────────────────────────────────────────────
 export const MeSchema = z.object({
   email: z.string(),

@@ -10,6 +10,7 @@ import {
   ScheduledJobLogResponseSchema,
   AuditLogResponseSchema,
   AutomationDetailSchema,
+  HealthSchema,
   MeSchema,
   EmployeeSearchResponseSchema,
   EmployeeSearchSuggestionsSchema,
@@ -24,6 +25,7 @@ import {
   type ScheduledJobLogResponse,
   type AuditLogResponse,
   type AutomationDetail,
+  type Health,
   type Me,
   type EmployeeSearchResponse,
   type EmployeeSearchSuggestions,
@@ -205,6 +207,10 @@ export function getAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogResp
 
 export function getAutomationDetail(flow: string, days = 30): Promise<AutomationDetail> {
   return fetchJSON(AutomationDetailSchema, `/api/admin/automations/${encodeURIComponent(flow)}?days=${days}`);
+}
+
+export function getIntegrationHealth(): Promise<Health> {
+  return fetchJSON(HealthSchema, `/api/admin/health`);
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────

@@ -18,8 +18,8 @@ import { toast } from "@/components/ui/toast";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/app/preset-picker";
-import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob } from "@/api";
-import type { EmployeeSearchResult } from "@/api";
+import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob, getIntegrationHealth } from "@/api";
+import type { EmployeeSearchResult, IntegrationStatus, Health } from "@/api";
 import { formatISTShort, describeCron } from "@/lib/utils";
 import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
 import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
@@ -40,6 +40,10 @@ const KPI_CONFIG = [
   { dataKey: "pendingApprovals"  as const, trendKey: null,                       label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
   { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
 ];
+
+const INTEGRATION_LABELS: Record<keyof Health, string> = {
+  jira: "Jira", googleWorkspace: "Google Workspace", activeDirectory: "Active Directory", microsoft365: "Microsoft 365",
+};
 
 /* ── Skeletons ──────────────────────────────────────────────── */
 function OverviewSkeleton() {
@@ -226,6 +230,7 @@ export function Overview() {
   const kpis     = useQuery({ queryKey: ["kpis",     dates], queryFn: () => getKpis(dates) });
   const anomalies = useQuery({ queryKey: ["anomalies", "overview", dates], queryFn: () => getAnomalies(dates) });
   const jobs     = useQuery({ queryKey: ["scheduled-jobs"], queryFn: getScheduledJobs });
+  const health   = useQuery({ queryKey: ["health"], queryFn: getIntegrationHealth });
 
   const qc = useQueryClient();
   const forceRun = useMutation({
@@ -257,6 +262,13 @@ export function Overview() {
       to: "/anomalies",
     });
   }
+  // Real system health -- a Jira/Google Workspace/AD/M365 outage looks
+  // identical to "our automation has a bug" without this, since both just
+  // show up as a pile of failed events with no other explanation.
+  const downIntegrations = health.data
+    ? (Object.entries(health.data) as [keyof Health, IntegrationStatus][]).filter(([, s]) => s === "down")
+    : [];
+  downIntegrations.forEach(([key]) => attentionItems.push({ text: `${INTEGRATION_LABELS[key]} isn't reachable right now`, to: "/settings" }));
   const systemHealthy = attentionItems.length === 0;
 
   return (
@@ -313,6 +325,30 @@ export function Overview() {
               </ul>
             )}
           </div>
+
+          {/* Integration health -- so a real Jira/GWS/AD/M365 outage reads
+              as exactly that, not as an unexplained pile of failed events. */}
+          {health.data && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">Integrations</span>
+              {(Object.entries(health.data) as [keyof Health, IntegrationStatus][]).map(([key, status]) => (
+                <span
+                  key={key}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                    status === "ok" ? "bg-emerald-50 text-emerald-700"
+                      : status === "down" ? "bg-red-50 text-red-700"
+                      : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    status === "ok" ? "bg-emerald-500" : status === "down" ? "bg-red-500" : "bg-slate-300"
+                  }`} />
+                  {INTEGRATION_LABELS[key]}
+                  {status === "not_configured" && " (not set up)"}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {KPI_CONFIG.map((c) => (

@@ -29,18 +29,23 @@ import { getEmployeeProgress } from "@/api";
 import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
 import { formatIST, titleCase } from "@/lib/utils";
 import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
+import { useTheme } from "@/providers/theme-provider";
 
 // How long to wait after the user stops typing before firing a live
 // suggestions request -- short enough to feel instant, long enough that a
 // fast typist doesn't fire one request per keystroke.
 const SUGGESTIONS_DEBOUNCE_MS = 250;
 
+// bg/color/border are inline `style` values (not Tailwind classes), so they
+// can't pick up `dark:` variants -- dark* fields are the equivalents swapped
+// in when the resolved theme is dark, mirroring the emerald/amber/red/slate
+// palette used by the Tailwind-based badges elsewhere in the app.
 const STEP_CONFIG = {
-  done:        { icon: CheckCircle2, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", label: "Done" },
-  in_progress: { icon: Clock,        color: "#d97706", bg: "#fffbeb", border: "#fde68a", label: "In Progress" },
-  pending:     { icon: Circle,       color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", label: "Pending" },
-  failed:      { icon: XCircle,      color: "#dc2626", bg: "#fef2f2", border: "#fecaca", label: "Failed" },
-  skipped:     { icon: MinusCircle,  color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", label: "Skipped" },
+  done:        { icon: CheckCircle2, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", darkColor: "#6ee7b7", darkBg: "#022c22", darkBorder: "#065f46", label: "Done" },
+  in_progress: { icon: Clock,        color: "#d97706", bg: "#fffbeb", border: "#fde68a", darkColor: "#fcd34d", darkBg: "#451a03", darkBorder: "#92400e", label: "In Progress" },
+  pending:     { icon: Circle,       color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", darkColor: "#94a3b8", darkBg: "#1e293b", darkBorder: "#334155", label: "Pending" },
+  failed:      { icon: XCircle,      color: "#dc2626", bg: "#fef2f2", border: "#fecaca", darkColor: "#fca5a5", darkBg: "#450a0a", darkBorder: "#991b1b", label: "Failed" },
+  skipped:     { icon: MinusCircle,  color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", darkColor: "#94a3b8", darkBg: "#1e293b", darkBorder: "#334155", label: "Skipped" },
 };
 
 const FLOW_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -55,10 +60,10 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
 };
 
 const STATUS_CONFIG = {
-  completed:   { label: "Completed",   bg: "#f0fdf4", color: "#15803d", dot: "#16a34a" },
-  in_progress: { label: "In Progress", bg: "#fffbeb", color: "#b45309", dot: "#d97706" },
-  failed:      { label: "Failed",      bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626" },
-  pending:     { label: "Pending",     bg: "#f8fafc", color: "#475569", dot: "#94a3b8" },
+  completed:   { label: "Completed",   bg: "#f0fdf4", color: "#15803d", darkBg: "#022c22", darkColor: "#6ee7b7", dot: "#16a34a" },
+  in_progress: { label: "In Progress", bg: "#fffbeb", color: "#b45309", darkBg: "#451a03", darkColor: "#fcd34d", dot: "#d97706" },
+  failed:      { label: "Failed",      bg: "#fef2f2", color: "#b91c1c", darkBg: "#450a0a", darkColor: "#fca5a5", dot: "#dc2626" },
+  pending:     { label: "Pending",     bg: "#f8fafc", color: "#475569", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8" },
 };
 
 function StepRow({ step }: { step: FlowStep }) {
@@ -66,13 +71,15 @@ function StepRow({ step }: { step: FlowStep }) {
   const flow = FLOW_META[step.flow];
   const Icon = cfg.icon;
   const FlowIcon = flow?.icon ?? Circle;
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
 
   return (
     <div
       style={{
-        background: cfg.bg,
-        border: `1px solid ${cfg.border}`,
-        borderLeft: `3px solid ${cfg.color}`,
+        background: dark ? cfg.darkBg : cfg.bg,
+        border: `1px solid ${dark ? cfg.darkBorder : cfg.border}`,
+        borderLeft: `3px solid ${dark ? cfg.darkColor : cfg.color}`,
       }}
       className="rounded-lg p-3.5 flex items-start gap-3"
     >
@@ -84,18 +91,18 @@ function StepRow({ step }: { step: FlowStep }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-slate-800">
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
             {step.label ?? flow?.label ?? step.flow}
           </span>
           <div className="flex items-center gap-1.5">
             {step.outcome && (
-              <span className="font-mono text-[11px] bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-600">
+              <span className="font-mono text-[11px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 text-slate-600 dark:text-slate-400">
                 {titleCase(step.outcome)}
               </span>
             )}
             <span
               className="flex items-center gap-1 text-xs font-semibold"
-              style={{ color: cfg.color }}
+              style={{ color: dark ? cfg.darkColor : cfg.color }}
             >
               <Icon className="h-3.5 w-3.5" />
               {cfg.label}
@@ -104,7 +111,7 @@ function StepRow({ step }: { step: FlowStep }) {
         </div>
         <div className="mt-1.5 flex items-center gap-3 flex-wrap">
           {step.completedAt && (
-            <span className="text-xs text-slate-500">{formatIST(step.completedAt)}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{formatIST(step.completedAt)}</span>
           )}
           {step.issueKey && (
             <Link
@@ -156,23 +163,23 @@ function ProgressRing({ steps }: { steps: FlowStep[] }) {
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-base font-bold text-slate-800 tabular-nums leading-none">{pct}%</span>
+          <span className="text-base font-bold text-slate-800 dark:text-slate-200 tabular-nums leading-none">{pct}%</span>
         </div>
       </div>
       <div className="text-xs space-y-1">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          <span className="text-slate-600">{done} of {total} done</span>
+          <span className="text-slate-600 dark:text-slate-400">{done} of {total} done</span>
         </div>
         {failed > 0 && (
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-            <span className="text-slate-600">{failed} failed</span>
+            <span className="text-slate-600 dark:text-slate-400">{failed} failed</span>
           </div>
         )}
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-slate-300 inline-block" />
-          <span className="text-slate-500">{total - done - failed} pending</span>
+          <span className="text-slate-500 dark:text-slate-400">{total - done - failed} pending</span>
         </div>
       </div>
     </div>
@@ -182,9 +189,11 @@ function ProgressRing({ steps }: { steps: FlowStep[] }) {
 function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail: boolean }) {
   const statusCfg = STATUS_CONFIG[record.overallStatus];
   const isOnboarding = record.type === "onboarding";
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
 
   return (
-    <div className="rounded-xl border bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Colored top strip */}
       <div
         className="h-1"
@@ -208,7 +217,7 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <p className="text-base font-bold text-slate-900 truncate cursor-default">
+                  <p className="text-base font-bold text-slate-900 dark:text-slate-100 truncate cursor-default">
                     {record.title ?? (isOnboarding ? "Onboarding" : "Offboarding")}
                   </p>
                 }
@@ -219,15 +228,15 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
               <span
                 className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
                 style={{
-                  background: isOnboarding ? "#eff6ff" : "#f5f3ff",
-                  color: isOnboarding ? "#2563eb" : "#7c3aed",
+                  background: isOnboarding ? (dark ? "#172554" : "#eff6ff") : (dark ? "#2e1065" : "#f5f3ff"),
+                  color: isOnboarding ? (dark ? "#93c5fd" : "#2563eb") : (dark ? "#c4b5fd" : "#7c3aed"),
                 }}
               >
                 {isOnboarding ? "Onboarding" : "Offboarding"}
               </span>
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
-                style={{ background: statusCfg.bg, color: statusCfg.color }}
+                style={{ background: dark ? statusCfg.darkBg : statusCfg.bg, color: dark ? statusCfg.darkColor : statusCfg.color }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full inline-block"
@@ -236,8 +245,8 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
                 {statusCfg.label}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {showEmail && <span className="font-medium text-slate-600">{record.email}</span>}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {showEmail && <span className="font-medium text-slate-600 dark:text-slate-400">{record.email}</span>}
               {showEmail && record.startedAt && " — "}
               {record.startedAt && `Started ${formatIST(record.startedAt)}`}
             </p>
@@ -331,13 +340,13 @@ export function EmployeeSearch() {
 
   return (
     <TooltipProvider delay={200}>
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
       {/* Page header */}
-      <div className="border-b bg-white px-8 py-6">
+      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Employee Search</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Employee Search</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Track onboarding and offboarding automation progress for any employee.
             </p>
           </div>
@@ -346,7 +355,7 @@ export function EmployeeSearch() {
         {/* Search */}
         <div className="mt-5 flex gap-3 max-w-2xl">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <Input
               type="text"
               placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
@@ -369,7 +378,7 @@ export function EmployeeSearch() {
 
             {showSuggestions && suggestions.length > 0 && (
               <ul
-                className="absolute z-10 mt-1.5 w-full rounded-lg border bg-white shadow-lg overflow-hidden"
+                className="absolute z-10 mt-1.5 w-full rounded-lg border bg-white dark:bg-slate-900 shadow-lg overflow-hidden"
                 onMouseDown={e => {
                   // Fires before the input's onBlur -- cancel the pending
                   // blur-close so the click below actually lands.
@@ -381,14 +390,14 @@ export function EmployeeSearch() {
                   <li
                     key={i}
                     onClick={() => pickSuggestion(s)}
-                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 border-b last:border-b-0"
+                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b last:border-b-0"
                   >
                     {s.issueKey && (
                       <span className="shrink-0 font-mono text-xs font-bold text-blue-600">{s.issueKey}</span>
                     )}
-                    <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{s.title ?? s.employeeEmail ?? s.issueKey}</span>
+                    <span className="flex-1 min-w-0 truncate text-sm text-slate-700 dark:text-slate-300">{s.title ?? s.employeeEmail ?? s.issueKey}</span>
                     {s.employeeEmail && (
-                      <span className="shrink-0 text-xs text-slate-400">{s.employeeEmail}</span>
+                      <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{s.employeeEmail}</span>
                     )}
                   </li>
                 ))}
@@ -406,7 +415,7 @@ export function EmployeeSearch() {
         {/* Loading */}
         {isLoading && (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 rounded-xl border bg-white px-6 py-4 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border bg-white dark:bg-slate-900 px-6 py-4 shadow-sm">
               <Skeleton className="h-12 w-12 rounded-xl flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-48" />
@@ -415,7 +424,7 @@ export function EmployeeSearch() {
             </div>
             <div className="grid gap-5 lg:grid-cols-2">
               {[0, 1].map((i) => (
-                <div key={i} className="rounded-xl border bg-white overflow-hidden shadow-sm">
+                <div key={i} className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
                   <div className="px-5 pt-4 pb-3 flex items-center gap-3">
                     <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
                     <div className="space-y-2">
@@ -440,8 +449,8 @@ export function EmployeeSearch() {
             <div className="flex items-center justify-center rounded-2xl mb-4">
              <img src="/search_employee.svg" className="h-52"/>
             </div>
-            <p className="text-base font-semibold text-slate-700">Search for an employee</p>
-            <p className="mt-1 text-sm text-slate-400">Enter an email, ticket ID, or name above to see their automation status.</p>
+            <p className="text-base font-semibold text-slate-700 dark:text-slate-300">Search for an employee</p>
+            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Enter an email, ticket ID, or name above to see their automation status.</p>
           </div>
         )}
 
@@ -449,15 +458,15 @@ export function EmployeeSearch() {
         {data && !isLoading && (
           <>
             {/* Identity bar */}
-            <div className="mb-6 flex items-center gap-4 rounded-xl border bg-white px-6 py-4 shadow-sm">
+            <div className="mb-6 flex items-center gap-4 rounded-xl border bg-white dark:bg-slate-900 px-6 py-4 shadow-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 flex-shrink-0">
                 <UserCircle2 className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 text-base truncate">
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-base truncate">
                   {data.resolvedEmails.length === 1 ? data.resolvedEmails[0] : data.query}
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {data.resolvedEmails.length === 0
                     ? `No employee matched "${data.query}"`
                     : data.records.length === 0
@@ -471,13 +480,13 @@ export function EmployeeSearch() {
                   {onboarding.length > 0 && (
                     <div className="text-center">
                       <p className="text-2xl font-bold text-blue-600 tabular-nums">{onboarding.length}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Onboarding</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Onboarding</p>
                     </div>
                   )}
                   {offboarding.length > 0 && (
                     <div className="text-center">
                       <p className="text-2xl font-bold text-violet-600 tabular-nums">{offboarding.length}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Offboarding</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Offboarding</p>
                     </div>
                   )}
                 </div>
@@ -486,14 +495,14 @@ export function EmployeeSearch() {
 
             {/* Not found */}
             {data.records.length === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-white py-20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 mb-4">
-                  <UserCircle2 className="h-7 w-7 text-slate-400" />
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-white dark:bg-slate-900 py-20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-4">
+                  <UserCircle2 className="h-7 w-7 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="text-base font-semibold text-slate-700">
+                <p className="text-base font-semibold text-slate-700 dark:text-slate-300">
                   {data.resolvedEmails.length === 0 ? "No matching employee" : "No records for this employee"}
                 </p>
-                <p className="mt-1 text-sm text-slate-400 max-w-sm text-center">
+                <p className="mt-1 text-sm text-slate-400 dark:text-slate-500 max-w-sm text-center">
                   {data.resolvedEmails.length === 0 ? (
                     <>No employee, ticket, or title matched <strong>{data.query}</strong>.</>
                   ) : (
@@ -511,7 +520,7 @@ export function EmployeeSearch() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-blue-500" />
-                      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600">
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         Onboarding
                       </h2>
                     </div>
@@ -524,7 +533,7 @@ export function EmployeeSearch() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-violet-500" />
-                      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600">
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         Offboarding
                       </h2>
                     </div>

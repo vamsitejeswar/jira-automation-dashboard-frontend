@@ -47,9 +47,9 @@ const SEVERITY_BORDER: Record<string, string> = {
   INFO:    "border-l-sky-400",
 };
 const SEVERITY_ROW_BG: Record<string, string> = {
-  ERROR:   "bg-red-50/60",
-  WARNING: "bg-amber-50/60",
-  INFO:    "bg-sky-50/30",
+  ERROR:   "bg-red-50/60 dark:bg-red-950/40",
+  WARNING: "bg-amber-50/60 dark:bg-amber-950/40",
+  INFO:    "bg-sky-50/30 dark:bg-sky-950/40",
 };
 
 function AnomaliesSkeleton() {
@@ -57,7 +57,7 @@ function AnomaliesSkeleton() {
     <div className="px-4 py-4 space-y-4">
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-white px-5 py-4 shadow-sm flex items-center gap-4">
+          <div key={i} className="rounded-xl bg-white dark:bg-slate-900 px-5 py-4 shadow-sm flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
             <div className="space-y-2">
               <Skeleton className="h-6 w-12" />
@@ -66,7 +66,7 @@ function AnomaliesSkeleton() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl bg-white overflow-hidden shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
         <div className="px-5 py-4 space-y-1.5">
           <Skeleton className="h-4 w-44" />
           <Skeleton className="h-3 w-32" />
@@ -81,7 +81,7 @@ function AnomaliesSkeleton() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl bg-white overflow-hidden shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
         <div className="px-5 py-4">
           <Skeleton className="h-4 w-28" />
         </div>
@@ -181,19 +181,19 @@ export function Anomalies() {
   }
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
       {/* Page header */}
-      <div className="border-b bg-white px-8 py-6">
+      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Failures &amp; History</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Failures &amp; History</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Every automation event, filterable down to just the ones that need attention.
             </p>
           </div>
           <div className="flex items-center gap-2">
             {days === 30 && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
                 <Info className="h-3.5 w-3.5 flex-shrink-0" />
                 Cloud Logging retention is 30 days.
               </div>
@@ -234,7 +234,7 @@ export function Anomalies() {
 
           <label className="ml-auto flex items-center gap-2 cursor-pointer">
             <Switch checked={includeNormal} onCheckedChange={updateIncludeNormal} />
-            <span className="text-xs text-slate-600 font-medium">Include normal events</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Include normal events</span>
           </label>
         </div>
       </div>
@@ -250,50 +250,50 @@ export function Anomalies() {
         <div className="px-4 py-4 space-y-4">
           {/* Stats bar */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 flex-shrink-0">
-                <Activity className="h-5 w-5 text-blue-600" />
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/40 flex-shrink-0">
+                <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 tabular-nums">{data!.totalEventsScanned}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Events scanned</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">{data!.totalEventsScanned}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Events scanned</p>
               </div>
             </div>
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950/40 flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-600 tabular-nums">{data!.totalAnomalies}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Failures detected</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{data!.totalAnomalies}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Failures detected</p>
               </div>
             </div>
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 flex-shrink-0">
-                <Zap className="h-5 w-5 text-amber-500" />
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/40 flex-shrink-0">
+                <Zap className="h-5 w-5 text-amber-500 dark:text-amber-400" />
               </div>
               <div>
-                <p className={`text-2xl font-bold tabular-nums ${parseFloat(failureRate) > 10 ? "text-red-600" : "text-amber-600"}`}>
+                <p className={`text-2xl font-bold tabular-nums ${parseFloat(failureRate) > 10 ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                   {failureRate}%
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">Failure rate</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Failure rate</p>
               </div>
             </div>
           </div>
 
           <>
             {/* Breakdown table */}
-            <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
               <div className="px-5 py-4">
-                <h2 className="text-sm font-semibold text-slate-700">Breakdown by flow &amp; status</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Click columns to sort</p>
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Breakdown by flow &amp; status</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click columns to sort</p>
               </div>
               {breakdown.length === 0 ? (
                 <EmptyState message="No failures in this period" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="border-b bg-slate-50/70">
+                    <thead className="border-b bg-slate-50/70 dark:bg-slate-800/50">
                       <tr>
                         {(["flow", "outcome", "count"] as const).map((f) => (
                           <th
@@ -302,7 +302,7 @@ export function Anomalies() {
                             onClick={() => toggleSort(f)}
                           >
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700 transition-colors">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
                                 {f === "outcome" ? "status" : f}
                               </span>
                               <SortIcon field={f} />
@@ -311,9 +311,9 @@ export function Anomalies() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {breakdown.map((row, i) => (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="px-5 py-3">
                             <Link to={`/automations/${row.flow}`} className="hover:underline decoration-dotted">
                               <FlowBadge flow={row.flow} />
@@ -322,7 +322,7 @@ export function Anomalies() {
                           <td className="px-5 py-3"><OutcomeBadge outcome={row.outcome} /></td>
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
-                              <span className="tabular-nums font-bold text-slate-900">{row.count}</span>
+                              <span className="tabular-nums font-bold text-slate-900 dark:text-slate-100">{row.count}</span>
                               <div
                                 className="h-1.5 rounded-full bg-blue-500 opacity-60"
                                 style={{
@@ -340,20 +340,20 @@ export function Anomalies() {
             </div>
 
             {/* Event list */}
-            <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
               <div className="px-5 py-4 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h2 className="text-sm font-semibold text-slate-700">
+                <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   {includeNormal ? "All events" : "Failure events"}
                 </h2>
-                <span className="ml-auto text-xs text-slate-400 font-medium">
+                <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium">
                   {data!.total} total
                 </span>
               </div>
               {events.length === 0 ? (
                 <EmptyState message="No events to show for this filter" />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {events.map((a, i) => (
                     <li
                       key={i}
@@ -368,22 +368,22 @@ export function Anomalies() {
                         <FlowBadge flow={a.flow} />
                         <OutcomeBadge outcome={a.outcome} />
                         {a.reason && !isSelfEvidentError(a.outcome) && (
-                          <span className="text-xs text-slate-500 italic">{a.reason}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 italic">{a.reason}</span>
                         )}
                         {a.issueKey && (
                           <Link
                             to={`/tickets/${a.issueKey}`}
-                            className="font-mono text-xs font-bold text-blue-600 hover:underline"
+                            className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             {a.issueKey}
                           </Link>
                         )}
                       </div>
-                      <span className="shrink-0 tabular-nums text-xs text-slate-400">
+                      <span className="shrink-0 tabular-nums text-xs text-slate-400 dark:text-slate-500">
                         {formatIST(a.timestamp)}
                       </span>
                       {a.error && (
-                        <p className="w-full mt-1 rounded-md bg-red-50 border border-red-100 px-3 py-1.5 font-mono text-xs text-red-600">
+                        <p className="w-full mt-1 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 px-3 py-1.5 font-mono text-xs text-red-600 dark:text-red-400">
                           {a.error}
                         </p>
                       )}

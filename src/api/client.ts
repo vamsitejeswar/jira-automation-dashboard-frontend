@@ -4,6 +4,7 @@ import {
   TicketDetailSchema,
   KpisSchema,
   TogglesResponseSchema,
+  ConfigResponseSchema,
   AnomalySummarySchema,
   ScheduledJobSchema,
   ScheduledJobsResponseSchema,
@@ -20,6 +21,7 @@ import {
   type TicketDetail,
   type Kpis,
   type Toggle,
+  type ConfigValue,
   type AnomalySummary,
   type ScheduledJob,
   type ScheduledJobLogResponse,
@@ -102,6 +104,17 @@ export function getToggles(): Promise<{ toggles: Toggle[] }> {
 
 export function updateToggle(name: string, value: boolean): Promise<{ toggles: Toggle[] }> {
   return fetchJSON(TogglesResponseSchema, `/api/admin/toggles`, {
+    method: "POST",
+    body: JSON.stringify({ name, value }),
+  });
+}
+
+export function getConfig(): Promise<{ config: ConfigValue[] }> {
+  return fetchJSON(ConfigResponseSchema, `/api/admin/config`);
+}
+
+export function updateConfig(name: string, value: string): Promise<{ config: ConfigValue[] }> {
+  return fetchJSON(ConfigResponseSchema, `/api/admin/config`, {
     method: "POST",
     body: JSON.stringify({ name, value }),
   });

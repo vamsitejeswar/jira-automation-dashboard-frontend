@@ -22,9 +22,9 @@ const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
 };
 
 const SEVERITY_ROW: Record<string, string> = {
-  ERROR:   "border-l-red-500 bg-red-50/40",
-  WARNING: "border-l-amber-400 bg-amber-50/30",
-  INFO:    "border-l-slate-200",
+  ERROR:   "border-l-red-500 bg-red-50/40 dark:bg-red-950/40",
+  WARNING: "border-l-amber-400 bg-amber-50/30 dark:bg-amber-950/40",
+  INFO:    "border-l-slate-200 dark:border-l-slate-800",
 };
 
 const AVATAR_COLORS = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2", "#db2777", "#4338ca"];
@@ -113,24 +113,24 @@ function buildTimeline(
 }
 
 const JIRA_STATUS_STYLE: Record<string, string> = {
-  closed:      "bg-emerald-50 text-emerald-700 border-emerald-200",
-  done:        "bg-emerald-50 text-emerald-700 border-emerald-200",
-  resolved:    "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "in progress": "bg-blue-50 text-blue-700 border-blue-200",
-  wip:         "bg-blue-50 text-blue-700 border-blue-200",
-  open:        "bg-amber-50 text-amber-700 border-amber-200",
-  "waiting for support": "bg-amber-50 text-amber-700 border-amber-200",
-  "waiting for approval": "bg-amber-50 text-amber-700 border-amber-200",
+  closed:      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  done:        "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  resolved:    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  "in progress": "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
+  wip:         "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
+  open:        "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  "waiting for support": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  "waiting for approval": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
 };
 
 function statusStyle(status: string) {
-  return JIRA_STATUS_STYLE[status.trim().toLowerCase()] ?? "bg-slate-100 text-slate-600 border-slate-200";
+  return JIRA_STATUS_STYLE[status.trim().toLowerCase()] ?? "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-800";
 }
 
 function TicketDetailSkeleton() {
   return (
     <div className="px-4 py-4 space-y-4">
-      <div className="rounded-xl bg-white shadow-sm p-6">
+      <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3 flex-1">
             <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ function TicketDetailSkeleton() {
           <Skeleton className="h-4 w-24 flex-shrink-0" />
         </div>
       </div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <div className="px-6 py-4">
           <Skeleton className="h-5 w-32" />
         </div>
@@ -188,18 +188,18 @@ export function TicketDetail() {
   const timeline = t ? buildTimeline(t.comments, t.auditEvents, anomalyKeys) : [];
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
       {/* Breadcrumb — always visible */}
-      <div className="border-b bg-white px-8 py-6 flex items-center gap-2">
+      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6 flex items-center gap-2">
         <Link
           to="/tickets"
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Tickets
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="font-mono font-semibold text-slate-800">{issueKey}</span>
+        <span className="text-slate-300 dark:text-slate-600">/</span>
+        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{issueKey}</span>
       </div>
 
       {ticket.isLoading ? (
@@ -211,7 +211,7 @@ export function TicketDetail() {
       ) : (
       <div className="px-4 py-4 space-y-4">
       {/* Header card */}
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <div className="h-1.5" style={{ background: FLOW_META[t!.flow]?.color ?? "#64748b" }} />
         <div className="p-6 flex items-start justify-between gap-6">
           <div className="flex items-start gap-4">
@@ -227,7 +227,7 @@ export function TicketDetail() {
             <div className="space-y-2">
               <div className="flex items-center gap-2.5 flex-wrap">
                 {t!.title && (
-                  <h1 className="text-base font-bold text-slate-900 leading-snug">{t!.title}</h1>
+                  <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">{t!.title}</h1>
                 )}
                 {t!.jiraStatus && (
                   <span className={`rounded-md border px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${statusStyle(t!.jiraStatus)}`}>
@@ -242,24 +242,24 @@ export function TicketDetail() {
                   <Badge variant="destructive">Has Error</Badge>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700 dark:text-slate-300">
                 <div>
-                  <span className="text-slate-500">Employee: </span>
+                  <span className="text-slate-500 dark:text-slate-400">Employee: </span>
                   {t!.employeeName ? `${t!.employeeName} — ` : ""}
                   {t!.employeeEmail ?? "—"}
                 </div>
                 <div>
-                  <span className="text-slate-500">Manager: </span>
+                  <span className="text-slate-500 dark:text-slate-400">Manager: </span>
                   {t!.managerEmail ?? "—"}
                 </div>
                 {t!.createdAt && (
                   <div>
-                    <span className="text-slate-500">Created: </span>
+                    <span className="text-slate-500 dark:text-slate-400">Created: </span>
                     {formatIST(t!.createdAt)}
                   </div>
                 )}
                 <div>
-                  <span className="text-slate-500">Last updated: </span>
+                  <span className="text-slate-500 dark:text-slate-400">Last updated: </span>
                   {formatIST(t!.updatedAt)}
                 </div>
               </div>
@@ -277,19 +277,19 @@ export function TicketDetail() {
       </div>
 
       {/* Timeline */}
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <div className="px-6 py-4">
-          <h2 className="text-sm font-semibold text-slate-700">Audit timeline</h2>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Audit timeline</h2>
         </div>
         {timeline.length === 0 ? (
-          <p className="px-6 pb-6 text-sm text-slate-500">No activity recorded.</p>
+          <p className="px-6 pb-6 text-sm text-slate-500 dark:text-slate-400">No activity recorded.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {timeline.map((item, i) => {
               if (item.kind === "comment") {
                 const avatarColor = colorForName(item.author);
                 return (
-                  <li key={i} className="flex items-start gap-3 px-6 py-5 hover:bg-slate-50/70 transition-colors">
+                  <li key={i} className="flex items-start gap-3 px-6 py-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
                     <div
                       className="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0 text-xs font-bold text-white"
                       style={{ background: avatarColor }}
@@ -298,28 +298,28 @@ export function TicketDetail() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-slate-900">{item.author}</span>
-                        <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">{formatIST(item.createdAt)}</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.author}</span>
+                        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">{formatIST(item.createdAt)}</span>
                       </div>
-                      <div className="mt-2.5 rounded-lg bg-slate-50 px-4 py-3">
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{item.body}</p>
+                      <div className="mt-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 px-4 py-3">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{item.body}</p>
                       </div>
                       {/* Audit events tied to this specific comment -- shown
                           attached to it, not as a separate floating row, so
                           it's unambiguous which comment they explain. */}
                       {item.related.length > 0 && (
-                        <div className="mt-2 space-y-1.5 border-l-2 border-slate-200 pl-3">
+                        <div className="mt-2 space-y-1.5 border-l-2 border-slate-200 dark:border-slate-800 pl-3">
                           {item.related.map((a, ri) => (
                             <div key={ri} className="flex flex-wrap items-center gap-1.5">
                               <SeverityBadge severity={a.event.severity} />
                               <OutcomeBadge outcome={a.event.outcome} />
                               {a.isAnomaly && (
-                                <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                                <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                                   <AlertTriangle className="h-3 w-3" /> Anomaly
                                 </span>
                               )}
                               {a.event.error && (
-                                <span className="font-mono text-xs text-red-600">{a.event.error}</span>
+                                <span className="font-mono text-xs text-red-600 dark:text-red-400">{a.event.error}</span>
                               )}
                             </div>
                           ))}
@@ -350,16 +350,16 @@ export function TicketDetail() {
                       <FlowBadge flow={item.event.flow} />
                       <OutcomeBadge outcome={item.event.outcome} />
                       {item.isAnomaly && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                        <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                           <AlertTriangle className="h-3 w-3" /> Anomaly
                         </span>
                       )}
-                      <span className="ml-auto text-xs text-slate-400">
+                      <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                         {formatIST(item.event.timestamp)}
                       </span>
                     </div>
                     {item.event.error && (
-                      <p className="mt-2 rounded-md bg-red-50 border border-red-100 px-2 py-1 font-mono text-xs text-red-600">
+                      <p className="mt-2 rounded-md bg-red-50 border border-red-100 dark:bg-red-950/40 dark:border-red-900/50 px-2 py-1 font-mono text-xs text-red-600 dark:text-red-400">
                         {item.event.error}
                       </p>
                     )}

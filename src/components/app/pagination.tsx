@@ -20,10 +20,10 @@ export function Pagination({
   }).filter((p) => p >= 1 && p <= totalPages);
 
   return (
-    <div className="flex items-center justify-between text-xs text-slate-500">
+    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
       <span>
-        Showing <span className="font-semibold text-slate-900">{start}–{end}</span> of{" "}
-        <span className="font-semibold text-slate-900">{total}</span> {itemLabel}
+        Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{start}–{end}</span> of{" "}
+        <span className="font-semibold text-slate-900 dark:text-slate-100">{total}</span> {itemLabel}
       </span>
       <div className="flex items-center gap-1">
         <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="h-7 text-xs">

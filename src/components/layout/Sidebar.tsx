@@ -50,9 +50,9 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200">
+    <aside className="flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-5 border-b border-slate-100">
+      <div className="flex h-20 items-center gap-3 px-5 border-b border-slate-100 dark:border-slate-800">
         <div className="flex not-only:items-center justify-center rounded-lgflex-shrink-0">
           <img
             src="/Jira_Logo.svg"
@@ -61,8 +61,8 @@ export function Sidebar() {
           />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 leading-none truncate">Jira Automation</p>
-          <p className="text-[11px] mt-0.5 truncate text-slate-400">
+          <p className="text-sm font-bold text-slate-900 leading-none truncate dark:text-slate-100">Jira Automation</p>
+          <p className="text-[11px] mt-0.5 truncate text-slate-400 dark:text-slate-500">
             Admin Dashboard
           </p>
         </div>
@@ -73,7 +73,7 @@ export function Sidebar() {
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi}>
             {group.title && (
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 {group.title}
               </p>
             )}
@@ -88,7 +88,7 @@ export function Sidebar() {
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                         isActive
                           ? "bg-blue-600 text-white shadow-md"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                       )
                     }
                   >
@@ -103,7 +103,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-slate-100">
+      <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2">
           {me.data?.picture ? (
             <img
@@ -113,20 +113,20 @@ export function Sidebar() {
               className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0">
-              <span className="text-xs font-bold text-blue-600">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0 dark:bg-blue-500/20">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                 {(me.data?.name ?? me.data?.email ?? "?").charAt(0).toUpperCase()}
               </span>
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-slate-900 truncate">{me.data?.name ?? me.data?.email ?? "..."}</p>
-            <p className="text-[10px] truncate text-slate-400">{me.data?.name ? me.data.email : "Administrator"}</p>
+            <p className="text-xs font-medium text-slate-900 truncate dark:text-slate-100">{me.data?.name ?? me.data?.email ?? "..."}</p>
+            <p className="text-[10px] truncate text-slate-400 dark:text-slate-500">{me.data?.name ? me.data.email : "Administrator"}</p>
           </div>
           <button
             onClick={handleLogout}
             title="Sign out"
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           >
             <LogOut className="h-4 w-4" />
           </button>

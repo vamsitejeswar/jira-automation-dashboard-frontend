@@ -36,10 +36,10 @@ function parseYMD(s: string | undefined): Date | undefined {
 // _previous_period), replacing the old hardcoded +12%/+4%/-3% arrows that
 // showed on every load regardless of real data.
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"    as const, trendKey: "onboardedCount"  as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", lightBg: "#eff6ff", sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "offboardedCount"   as const, trendKey: "offboardedCount" as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", lightBg: "#f5f3ff", sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "pendingApprovals"  as const, trendKey: null,                       label: "Pending Approvals", icon: MailCheck, accent: "#d97706", lightBg: "#fffbeb", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
-  { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", lightBg: "#fef2f2", sub: "Need attention",         viewTo: "/anomalies" },
+  { dataKey: "onboardedCount"    as const, trendKey: "onboardedCount"  as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "offboardedCount"   as const, trendKey: "offboardedCount" as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "pendingApprovals"  as const, trendKey: null,                       label: "Pending Approvals", icon: MailCheck, accent: "#d97706", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
+  { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", sub: "Need attention",         viewTo: "/anomalies" },
 ];
 
 const DISMISSED_STORAGE_KEY = "dashboard-dismissed-attention-items";
@@ -60,7 +60,7 @@ function OverviewSkeleton() {
     <div className="px-4 py-4 space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden flex flex-col">
+          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden flex flex-col dark:bg-slate-900">
             <div className="p-5 flex-1 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -78,7 +78,7 @@ function OverviewSkeleton() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-slate-900">
         <div className="px-5 py-4 flex items-center justify-between">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-3 w-36" />
@@ -87,7 +87,7 @@ function OverviewSkeleton() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden">
+          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-slate-900">
             <div className="px-5 py-4"><Skeleton className="h-4 w-36" /></div>
             <div className="space-y-3 px-5 pb-5">
               {[...Array(5)].map((_, j) => (
@@ -107,9 +107,9 @@ function OverviewSkeleton() {
 }
 
 /* ── KPI tile ───────────────────────────────────────────────── */
-function KpiTile({ label, value, previous, icon: Icon, accent, lightBg, live, sub, viewTo }: {
+function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo }: {
   label: string; value: number; previous?: number; icon: React.ElementType;
-  accent: string; lightBg: string; live?: boolean; sub: string; viewTo: string;
+  accent: string; live?: boolean; sub: string; viewTo: string;
 }) {
   const hasTrend = previous !== undefined && previous > 0;
   const pctChange = hasTrend ? Math.round(((value - previous!) / previous!) * 100) : 0;
@@ -118,32 +118,32 @@ function KpiTile({ label, value, previous, icon: Icon, accent, lightBg, live, su
   // For Failures, "up" is bad (red); for everything else "up" is good (green).
   const trendColor = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col dark:bg-slate-900">
       <div className="h-1" style={{ background: accent }} />
       <div className="p-5 flex-1">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-            <p className="mt-2 text-4xl font-bold text-slate-900 tabular-nums">{value}</p>
-            <p className="mt-1 text-xs text-slate-500">{sub}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="mt-2 text-4xl font-bold text-slate-900 tabular-nums dark:text-slate-100">{value}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>
           </div>
-          <div className="rounded-xl p-3 flex-shrink-0" style={{ background: lightBg }}>
+          <div className="rounded-xl p-3 flex-shrink-0" style={{ background: accent + "1f" }}>
             <Icon className="h-5 w-5" style={{ color: accent }} />
           </div>
         </div>
         {live ? (
-          <div className="mt-4 text-xs text-slate-400">Live count, not date-ranged</div>
+          <div className="mt-4 text-xs text-slate-400 dark:text-slate-500">Live count, not date-ranged</div>
         ) : hasTrend ? (
           <div className="mt-4 flex items-center gap-1.5 text-xs">
             <TrendIcon className="h-3.5 w-3.5" style={{ color: trendColor }} />
             <span className="font-semibold" style={{ color: trendColor }}>{up ? "+" : ""}{pctChange}%</span>
-            <span className="text-slate-400">vs previous period</span>
+            <span className="text-slate-400 dark:text-slate-500">vs previous period</span>
           </div>
         ) : (
-          <div className="mt-4 text-xs text-slate-400">No prior-period data yet to compare</div>
+          <div className="mt-4 text-xs text-slate-400 dark:text-slate-500">No prior-period data yet to compare</div>
         )}
       </div>
-      <div className="border-t border-slate-100 px-5 py-2.5">
+      <div className="border-t border-slate-100 px-5 py-2.5 dark:border-slate-800">
         <Link to={viewTo} className="flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: accent }}>
           View details <ArrowRight className="h-3.5 w-3.5" />
         </Link>
@@ -156,9 +156,9 @@ function KpiTile({ label, value, previous, icon: Icon, accent, lightBg, live, su
 // Scheduler itself has it enabled -- an enabled job silently failing every
 // night used to look identical (both just a green dot) to a healthy one.
 const JOB_STATUS_META: Record<string, { dot: string; label: string; text: string }> = {
-  succeeded: { dot: "bg-emerald-500", label: "Succeeded", text: "text-emerald-700" },
-  failed:    { dot: "bg-red-500",     label: "Failed",    text: "text-red-700" },
-  unknown:   { dot: "bg-slate-300",   label: "No runs yet", text: "text-slate-400" },
+  succeeded: { dot: "bg-emerald-500", label: "Succeeded", text: "text-emerald-700 dark:text-emerald-300" },
+  failed:    { dot: "bg-red-500",     label: "Failed",    text: "text-red-700 dark:text-red-300" },
+  unknown:   { dot: "bg-slate-300 dark:bg-slate-600", label: "No runs yet", text: "text-slate-400 dark:text-slate-500" },
 };
 function JobStatus({ status }: { status?: string }) {
   const meta = JOB_STATUS_META[status ?? "unknown"] ?? JOB_STATUS_META.unknown;
@@ -193,7 +193,7 @@ function GlobalSearchBox() {
 
   return (
     <div className="relative w-72">
-      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
       <Input
         type="text"
         placeholder="Search employee, email, or ticket..."
@@ -209,17 +209,17 @@ function GlobalSearchBox() {
       {loading && <Spinner className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />}
       {showSuggestions && suggestions.length > 0 && (
         <ul
-          className="absolute z-10 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg"
+          className="absolute z-10 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg dark:bg-slate-900"
           onMouseDown={(e) => e.preventDefault()}
         >
           {suggestions.map((s, i) => (
             <li
               key={i}
               onClick={() => goTo(s)}
-              className="px-3.5 py-2 cursor-pointer hover:bg-slate-50 border-b last:border-b-0"
+              className="px-3.5 py-2 cursor-pointer hover:bg-slate-50 border-b last:border-b-0 dark:hover:bg-slate-800/50"
             >
-              <p className="text-xs font-semibold text-slate-700 truncate">{s.title ?? s.issueKey}</p>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className="text-xs font-semibold text-slate-700 truncate dark:text-slate-300">{s.title ?? s.issueKey}</p>
+              <p className="text-[11px] text-slate-400 truncate dark:text-slate-500">
                 {s.employeeEmail ?? "No employee resolved"} · {s.issueKey}
               </p>
             </li>
@@ -308,12 +308,12 @@ export function Overview() {
   const allDismissed = attentionItems.length > 0 && visibleAttentionItems.length === 0;
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
       {/* Header — always visible */}
-      <div className="border-b bg-white px-8 py-6">
+      <div className="border-b bg-white px-8 py-6 dark:bg-slate-900">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-slate-100">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Jira onboarding &amp; offboarding automation monitor · IST</p>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <GlobalSearchBox />
@@ -340,7 +340,7 @@ export function Overview() {
               "is this healthy right now," before any other detail. */}
           <div
             className={`rounded-xl border px-5 py-4 shadow-sm ${
-              systemHealthy || allDismissed ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+              systemHealthy || allDismissed ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900/50" : "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -349,7 +349,7 @@ export function Overview() {
                   systemHealthy || allDismissed ? "bg-emerald-500" : "bg-amber-500"
                 }`}
               />
-              <p className={`text-sm font-bold ${systemHealthy || allDismissed ? "text-emerald-800" : "text-amber-800"}`}>
+              <p className={`text-sm font-bold ${systemHealthy || allDismissed ? "text-emerald-800 dark:text-emerald-300" : "text-amber-800 dark:text-amber-300"}`}>
                 {systemHealthy
                   ? "All systems operational"
                   : allDismissed
@@ -361,12 +361,12 @@ export function Overview() {
               <ul className="mt-2.5 space-y-1.5">
                 {visibleAttentionItems.map((item) => (
                   <li key={item.id} className="flex items-center gap-3">
-                    <Link to={item.to} className="text-sm font-medium text-amber-800 hover:underline">
+                    <Link to={item.to} className="text-sm font-medium text-amber-800 hover:underline dark:text-amber-300">
                       {item.text} →
                     </Link>
                     <button
                       onClick={() => dismiss(item.id)}
-                      className="ml-auto shrink-0 text-xs font-medium text-amber-700/70 hover:text-amber-900 hover:underline"
+                      className="ml-auto shrink-0 text-xs font-medium text-amber-700/70 hover:text-amber-900 hover:underline dark:text-amber-400/70 dark:hover:text-amber-200"
                     >
                       Ignore
                     </button>
@@ -380,7 +380,7 @@ export function Overview() {
                   setDismissedIds(new Set());
                   localStorage.removeItem(DISMISSED_STORAGE_KEY);
                 }}
-                className="mt-2.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                className="mt-2.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-300"
               >
                 Show {dismissedCount} dismissed item{dismissedCount === 1 ? "" : "s"}
               </button>
@@ -398,7 +398,6 @@ export function Overview() {
                 label={c.label}
                 icon={c.icon}
                 accent={c.accent}
-                lightBg={c.lightBg}
                 live={c.live}
                 sub={c.sub}
                 viewTo={c.viewTo}
@@ -408,13 +407,13 @@ export function Overview() {
             ))}
           </div>
 
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
             <div className="px-5 py-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Activity className="h-4 w-4 text-slate-400" />
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Activity className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                 Activity trend
               </h2>
-              <span className="text-xs text-slate-400">{dates.from} → {dates.to}</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{dates.from} → {dates.to}</span>
             </div>
             <div className="p-5">
               {kpis.data!.byDay.length === 0 ? <EmptyState message="No trend data" /> : <TrendChart data={kpis.data!.byDay} />}
@@ -423,10 +422,10 @@ export function Overview() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Anomalies */}
-            <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
               <div className="flex items-center justify-between px-5 py-4">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <AlertTriangle className="h-4 w-4 text-slate-400" />
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                   Recent anomalies
                 </h2>
                 <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
@@ -449,12 +448,12 @@ export function Overview() {
               ) : anomalies.data!.anomalies.length === 0 ? (
                 <EmptyState message="No anomalies in this period" className="py-8" />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {anomalies.data!.anomalies.slice(0, 8).map((a, i) => (
-                    <li key={i} className="flex items-center gap-2.5 px-5 py-3 hover:bg-slate-50 transition-colors">
+                    <li key={i} className="flex items-center gap-2.5 px-5 py-3 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
                       <SeverityBadge severity={a.severity} />
                       <FlowBadge flow={a.flow} />
-                      <span className="flex-1 truncate text-xs text-slate-500">{a.outcome}</span>
+                      <span className="flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{a.outcome}</span>
                       {a.issueKey && (
                         <Link
                           to={`/tickets/${a.issueKey}`}
@@ -464,7 +463,7 @@ export function Overview() {
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </Link>
                       )}
-                      <span className="shrink-0 text-xs text-slate-600 tabular-nums">{formatISTShort(a.timestamp)}</span>
+                      <span className="shrink-0 text-xs text-slate-600 tabular-nums dark:text-slate-400">{formatISTShort(a.timestamp)}</span>
                       
                     </li>
                   ))}
@@ -473,10 +472,10 @@ export function Overview() {
             </div>
 
             {/* Jobs */}
-            <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
               <div className="px-5 py-4 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-slate-400" />
-                <h2 className="text-sm font-semibold text-slate-700">Upcoming scheduled runs</h2>
+                <Clock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Upcoming scheduled runs</h2>
               </div>
               {jobs.isLoading ? (
                 <div className="space-y-3.5 px-5 py-3.5">
@@ -499,29 +498,29 @@ export function Overview() {
               ) : jobs.data!.jobs.length === 0 ? (
                 <EmptyState message="No scheduled jobs found" className="py-8" />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {[...jobs.data!.jobs].sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime()).map((job) => {
                     const isRunningThis = forceRun.isPending && forceRun.variables === job.name;
                     return (
-                    <li key={job.name} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/70 transition-colors">
+                    <li key={job.name} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/70 transition-colors dark:hover:bg-slate-800/50">
                       <div className="w-24 shrink-0"><JobStatus status={job.lastRunStatus} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="truncate text-sm font-semibold text-slate-800">{job.label}</p>
-                          <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500" title="Cloud Scheduler job name">
+                          <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{job.label}</p>
+                          <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400" title="Cloud Scheduler job name">
                             {job.name}
                           </span>
                         </div>
-                        <p className="mt-0.5 truncate text-xs text-slate-400">{describeCron(job.schedule, job.timeZone)}</p>
+                        <p className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">{describeCron(job.schedule, job.timeZone)}</p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-xs font-semibold text-slate-700 tabular-nums">{formatISTShort(job.nextRunAt)}</p>
-                        <p className="text-[11px] text-slate-400">next run</p>
+                        <p className="text-xs font-semibold text-slate-700 tabular-nums dark:text-slate-300">{formatISTShort(job.nextRunAt)}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">next run</p>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1.5 text-xs font-medium shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                        className="h-8 gap-1.5 text-xs font-medium shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-200"
                         disabled={forceRun.isPending}
                         onClick={() => forceRun.mutate(job.name)}
                         title="Force run now, without waiting for the schedule"
@@ -539,23 +538,23 @@ export function Overview() {
           </div>
              {health.data && (
             <TooltipProvider>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">Integrations</span>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm dark:bg-slate-900">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1 dark:text-slate-500">Integrations</span>
               {(Object.entries(health.data) as [keyof Health, IntegrationStatus][]).map(([key, status]) => (
                 <Tooltip key={key}>
                   <TooltipTrigger
                     render={
                       <span
                         className={`inline-flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          status === "ok" ? "bg-emerald-50 text-emerald-700"
-                            : status === "down" ? "bg-red-50 text-red-700"
-                            : "bg-slate-100 text-slate-400"
+                          status === "ok" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            : status === "down" ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                            : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
                         }`}
                       />
                     }
                   >
                     <span className={`h-1.5 w-1.5 rounded-full ${
-                      status === "ok" ? "bg-emerald-500" : status === "down" ? "bg-red-500" : "bg-slate-300"
+                      status === "ok" ? "bg-emerald-500" : status === "down" ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"
                     }`} />
                     {INTEGRATION_LABELS[key]}
                     {status === "not_configured" && " (not set up)"}

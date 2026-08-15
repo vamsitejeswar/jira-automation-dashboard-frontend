@@ -45,7 +45,7 @@ const AUTOMATION_META: Record<string, { label: string; icon: React.ElementType; 
 function AutomationDetailSkeleton() {
   return (
     <div className="px-4 py-4 space-y-4">
-      <div className="rounded-xl bg-white shadow-sm p-6 space-y-3">
+      <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm p-6 space-y-3">
         <Skeleton className="h-6 w-56" />
         <Skeleton className="h-4 w-96" />
       </div>
@@ -67,14 +67,14 @@ export function AutomationDetail() {
   });
 
   return (
-    <div className="min-h-full bg-slate-50">
-      <div className="border-b bg-white px-8 py-6 flex items-center gap-2">
-        <Link to="/schedules" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6 flex items-center gap-2">
+        <Link to="/schedules" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           System Health
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="font-semibold text-slate-800">{meta?.label ?? flow}</span>
+        <span className="text-slate-300 dark:text-slate-600">/</span>
+        <span className="font-semibold text-slate-800 dark:text-slate-200">{meta?.label ?? flow}</span>
       </div>
 
       {isLoading ? (
@@ -84,21 +84,21 @@ export function AutomationDetail() {
       ) : (
         <div className="px-4 py-4 space-y-4">
           {/* What this is, is it on */}
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
             <div className="h-1.5" style={{ background: meta?.color ?? "#64748b" }} />
             <div className="p-6 flex items-start gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0" style={{ background: (meta?.color ?? "#64748b") + "18" }}>
                 {(() => { const Icon = meta?.icon ?? Clock; return <Icon className="h-5 w-5" style={{ color: meta?.color ?? "#64748b" }} />; })()}
               </div>
               <div className="flex-1">
-                <h1 className="text-lg font-bold text-slate-900">{meta?.label ?? flow}</h1>
-                <p className="mt-1 text-sm text-slate-600 max-w-2xl">{meta?.blurb ?? "No description available for this flow."}</p>
+                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">{meta?.label ?? flow}</h1>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 max-w-2xl">{meta?.blurb ?? "No description available for this flow."}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {data!.toggles.map((t) => (
                     <span
                       key={t.name}
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        t.value ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        t.value ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                       }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${t.value ? "bg-emerald-500" : "bg-slate-400"}`} />
@@ -112,49 +112,49 @@ export function AutomationDetail() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm">
-              <p className="text-2xl font-bold text-slate-900 tabular-nums">
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                 {data!.successRate === null ? "—" : `${data!.successRate}%`}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">Success rate (last 30 days)</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Success rate (last 30 days)</p>
             </div>
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm">
-              <p className="text-2xl font-bold text-emerald-600 tabular-nums">{data!.doneCount}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Succeeded</p>
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{data!.doneCount}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Succeeded</p>
             </div>
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm">
-              <p className="text-2xl font-bold text-red-600 tabular-nums">{data!.failedCount}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Failed</p>
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{data!.failedCount}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Failed</p>
             </div>
-            <div className="rounded-xl border bg-white px-5 py-4 shadow-sm">
-              <p className="text-2xl font-bold text-amber-600 tabular-nums">{data!.inFlightCount}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Still in flight</p>
+            <div className="rounded-xl border bg-white dark:bg-slate-900 px-5 py-4 shadow-sm">
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{data!.inFlightCount}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Still in flight</p>
             </div>
           </div>
 
           {/* Recent runs */}
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b">
-              <h2 className="text-sm font-semibold text-slate-700">Recent runs</h2>
-              <p className="mt-0.5 text-xs text-slate-500">{data!.ticketCount} tickets touched this flow in the last 30 days</p>
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Recent runs</h2>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{data!.ticketCount} tickets touched this flow in the last 30 days</p>
             </div>
             {data!.recentEvents.length === 0 ? (
               <EmptyState message="No runs logged for this automation in the last 30 days" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-slate-50/70">
+                  <thead className="border-b bg-slate-50/70 dark:bg-slate-800/50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Time</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Ticket</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Status</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Detail</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Time</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Ticket</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Detail</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {data!.recentEvents.map((e, i) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-3 tabular-nums text-xs text-slate-500 whitespace-nowrap">{formatIST(e.timestamp)}</td>
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-5 py-3 tabular-nums text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatIST(e.timestamp)}</td>
                         <td className="px-5 py-3 whitespace-nowrap">
                           {e.issueKey ? (
                             <HoverCard>
@@ -162,11 +162,11 @@ export function AutomationDetail() {
                                 {e.issueKey}
                               </HoverCardTrigger>
                               <HoverCardContent>
-                                <p className="text-sm font-semibold text-slate-800 truncate">{e.title ?? e.issueKey}</p>
-                                <p className="mt-1 text-xs text-slate-500">{formatIST(e.timestamp)}</p>
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{e.title ?? e.issueKey}</p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatIST(e.timestamp)}</p>
                               </HoverCardContent>
                             </HoverCard>
-                          ) : <span className="text-xs text-slate-400">—</span>}
+                          ) : <span className="text-xs text-slate-400 dark:text-slate-500">—</span>}
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-1.5">
@@ -174,7 +174,7 @@ export function AutomationDetail() {
                             {!isSelfEvidentError(e.outcome) && <SeverityBadge severity={e.severity} />}
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-xs text-slate-600 max-w-96 truncate">{e.error ?? "—"}</td>
+                        <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-96 truncate">{e.error ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>

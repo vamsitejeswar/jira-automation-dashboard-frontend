@@ -2,13 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { titleCase } from "@/lib/utils";
 
 const STATUS_STYLE = {
-  success: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  warning: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  error:   "bg-red-50 text-red-700 ring-1 ring-red-200",
-  info:    "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
-  muted:   "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
-  purple:  "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
-  orange:  "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
+  success: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/50",
+  warning: "bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/50",
+  error:   "bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/50",
+  info:    "bg-sky-50 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/50",
+  muted:   "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-800",
+  purple:  "bg-purple-50 text-purple-700 ring-1 ring-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:ring-purple-900/50",
+  orange:  "bg-orange-50 text-orange-700 ring-1 ring-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-900/50",
 } as const;
 
 type StatusKey = keyof typeof STATUS_STYLE;

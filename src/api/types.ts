@@ -157,6 +157,27 @@ export const TogglesResponseSchema = z.object({
   toggles: z.array(ToggleSchema),
 });
 
+// ── Config ─────────────────────────────────────────────────────────────────────
+export const ConfigNameSchema = z.enum([
+  "jira_project_key",
+  "it_mail",
+  "admin_mail",
+  "drive_common_mail",
+]);
+export type ConfigName = z.infer<typeof ConfigNameSchema>;
+
+export const ConfigValueSchema = z.object({
+  name: ConfigNameSchema,
+  label: z.string(),
+  description: z.string(),
+  value: z.string(),
+});
+export type ConfigValue = z.infer<typeof ConfigValueSchema>;
+
+export const ConfigResponseSchema = z.object({
+  config: z.array(ConfigValueSchema),
+});
+
 // ── Anomalies ──────────────────────────────────────────────────────────────────
 export const AnomalyEventSchema = z.object({
   timestamp: z.string(),

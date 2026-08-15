@@ -23,28 +23,35 @@ import { toast } from "@/components/ui/toast";
 import { getApprovals, approveMailApproval, rejectMailApproval, searchGwsUsers } from "@/api";
 import type { Approval, ApprovalStatus, GwsUser } from "@/api";
 import { formatIST } from "@/lib/utils";
+import { useTheme } from "@/providers/theme-provider";
 
 const CLONE_SEARCH_DEBOUNCE_MS = 250;
 
-const STATUS_CONFIG: Record<ApprovalStatus, { label: string; icon: React.ElementType; bg: string; color: string; dot: string; description: string }> = {
+// bg/color are inline `style` values (not Tailwind classes), so they can't
+// pick up `dark:` variants -- darkBg/darkColor are the equivalents StatusBadge
+// swaps in when the resolved theme is dark, mirroring the same emerald/amber/
+// red/slate palette used by the Tailwind-based badges elsewhere in the app.
+const STATUS_CONFIG: Record<ApprovalStatus, {
+  label: string; icon: React.ElementType; bg: string; color: string; darkBg: string; darkColor: string; dot: string; description: string;
+}> = {
   pending: {
-    label: "Pending", icon: Clock, bg: "#fffbeb", color: "#b45309", dot: "#d97706",
+    label: "Pending", icon: Clock, bg: "#fffbeb", color: "#b45309", darkBg: "#451a03", darkColor: "#fcd34d", dot: "#d97706",
     description: "Decision email sent and being actively tracked -- will be reminded up to 3 times if the manager doesn't respond.",
   },
   approved: {
-    label: "Approved", icon: CheckCircle2, bg: "#f0fdf4", color: "#15803d", dot: "#16a34a",
+    label: "Approved", icon: CheckCircle2, bg: "#f0fdf4", color: "#15803d", darkBg: "#022c22", darkColor: "#6ee7b7", dot: "#16a34a",
     description: "The manager (or an admin, manually) already made a decision -- access cloned, no action needed, or the Drive transfer completed.",
   },
   ignored: {
-    label: "Ignored", icon: Ban, bg: "#f8fafc", color: "#475569", dot: "#94a3b8",
+    label: "Ignored", icon: Ban, bg: "#f8fafc", color: "#475569", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8",
     description: "No email was ever sent -- required info (manager or employee email) was missing on the ticket.",
   },
   no_response: {
-    label: "No Response", icon: AlertOctagon, bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626",
+    label: "No Response", icon: AlertOctagon, bg: "#fef2f2", color: "#b91c1c", darkBg: "#450a0a", darkColor: "#fca5a5", dot: "#dc2626",
     description: "Reminded 3 times with no reply -- the automation gave up and commented on the ticket instead.",
   },
   failed: {
-    label: "Failed", icon: XCircle, bg: "#fef2f2", color: "#b91c1c", dot: "#dc2626",
+    label: "Failed", icon: XCircle, bg: "#fef2f2", color: "#b91c1c", darkBg: "#450a0a", darkColor: "#fca5a5", dot: "#dc2626",
     description: "Sending the decision email itself failed (e.g. an SMTP error) -- no email ever reached the manager.",
   },
   // The email went out but there's no live pending_approvals record for it
@@ -52,7 +59,7 @@ const STATUS_CONFIG: Record<ApprovalStatus, { label: string; icon: React.Element
   // it'll never be reminded or auto-given-up, and can't be manually
   // approved/rejected from here either (see ApprovalRow's Actions gating).
   untracked: {
-    label: "Untracked", icon: HelpCircle, bg: "#f8fafc", color: "#64748b", dot: "#94a3b8",
+    label: "Untracked", icon: HelpCircle, bg: "#f8fafc", color: "#64748b", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8",
     description: "Email sent before this dashboard's reminder-tracking existed -- won't be reminded or actionable here. The manager's original email link still works fine.",
   },
 };
@@ -70,13 +77,15 @@ const STATUS_TABS: { key: ApprovalStatus | "all"; label: string }[] = [
 function StatusBadge({ status }: { status: ApprovalStatus }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <span
             className="inline-flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{ background: cfg.bg, color: cfg.color }}
+            style={{ background: dark ? cfg.darkBg : cfg.bg, color: dark ? cfg.darkColor : cfg.color }}
           />
         }
       >
@@ -91,7 +100,7 @@ function StatusBadge({ status }: { status: ApprovalStatus }) {
 function ApprovalsSkeleton() {
   return (
     <div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <div className="px-5 py-4 space-y-1.5">
           <Skeleton className="h-4 w-44" />
           <Skeleton className="h-3 w-24" />
@@ -166,10 +175,10 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
 function WaitingAge({ since }: { since: string | null }) {
   if (!since) return null;
   const days = Math.floor((Date.now() - new Date(since).getTime()) / 86_400_000);
-  if (days < 1) return <span className="text-[11px] font-medium text-slate-400">just now</span>;
+  if (days < 1) return <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">just now</span>;
   const urgent = days >= 3;
   return (
-    <span className={`text-[11px] font-semibold ${urgent ? "text-red-600" : "text-slate-400"}`}>
+    <span className={`text-[11px] font-semibold ${urgent ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-slate-500"}`}>
       waiting {days}d
     </span>
   );
@@ -177,7 +186,7 @@ function WaitingAge({ since }: { since: string | null }) {
 
 function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a: PendingAction) => void }) {
   return (
-    <tr className="hover:bg-slate-50 transition-colors">
+    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
       <td className="px-5 py-3 whitespace-nowrap">
         <Link
           to={`/tickets/${approval.issueKey}`}
@@ -195,9 +204,9 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
           {approval.status === "pending" && <WaitingAge since={approval.updatedAt} />}
         </div>
       </td>
-      <td className="px-5 py-3 text-xs text-slate-600 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
-      <td className="px-5 py-3 text-xs text-slate-600 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>
-      <td className="px-5 py-3 tabular-nums text-xs text-slate-400 whitespace-nowrap">
+      <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
+      <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>
+      <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
         {formatIST(approval.updatedAt)}
       </td>
       <td className="px-5 py-3 whitespace-nowrap">
@@ -207,7 +216,7 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
               <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
                 Actions
                 {approval.reminderCount > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 px-1 text-[10px] font-semibold text-slate-600">
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-1 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
                     {approval.reminderCount}
                   </span>
                 )}
@@ -226,7 +235,7 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="text-xs text-slate-300">—</span>
+          <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
         )}
       </td>
     </tr>
@@ -339,13 +348,13 @@ export function Approvals() {
 
   return (
     <TooltipProvider delay={200}>
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
       {/* Page header */}
-      <div className="border-b bg-white px-8 py-6">
+      <div className="border-b bg-white dark:bg-slate-900 px-8 py-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Approvals</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Approvals</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Mail Approval tickets — Akamai Access setup and Drive Transfer requests awaiting or resolved
               via a manager decision email.
             </p>
@@ -363,7 +372,7 @@ export function Approvals() {
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     status === tab.key
                       ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                   }`}
                 >
                   {tab.label}
@@ -379,7 +388,7 @@ export function Approvals() {
             })}
           </div>
           <div className="relative ml-auto w-64">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <Input
               type="text"
               placeholder="Search issue, employee, manager..."
@@ -398,18 +407,18 @@ export function Approvals() {
         ) : isError ? (
           <ErrorState error={error as Error} onRetry={refetch} />
         ) : (
-          <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+          <div className="rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
             <div className="px-5 py-4 flex items-center gap-2">
-              <MailCheck className="h-4 w-4 text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-700">Mail Approval tickets</h2>
-              <span className="ml-auto text-xs text-slate-400 font-medium">{data!.total} total</span>
+              <MailCheck className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Mail Approval tickets</h2>
+              <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium">{data!.total} total</span>
             </div>
             {rows.length === 0 ? (
               <EmptyState message="No approvals to show for this filter" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-slate-50/70">
+                  <thead className="border-b bg-slate-50/70 dark:bg-slate-800/50">
                     <tr>
                       {COLUMNS.map((col) => (
                         <th
@@ -418,19 +427,19 @@ export function Approvals() {
                           onClick={() => toggleSort(col.key)}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700 transition-colors">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
                               {col.label}
                             </span>
                             <SortIcon field={col.key} />
                           </div>
                         </th>
                       ))}
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {rows.map((a) => (
                       <ApprovalRow key={a.issueKey} approval={a} onAction={setPendingAction} />
                     ))}
@@ -471,17 +480,17 @@ export function Approvals() {
                     )}
                     {showCloneSuggestions && cloneSuggestions.length > 0 && (
                       <ul
-                        className="absolute z-10 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg border bg-white shadow-lg"
+                        className="absolute z-10 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg border bg-white dark:bg-slate-900 shadow-lg"
                         onMouseDown={(e) => e.preventDefault()}
                       >
                         {cloneSuggestions.map((u) => (
                           <li
                             key={u.email}
                             onClick={() => { setCloneFromEmail(u.email); setShowCloneSuggestions(false); }}
-                            className="flex items-center justify-between gap-3 px-3.5 py-2 cursor-pointer hover:bg-slate-50 border-b last:border-b-0"
+                            className="flex items-center justify-between gap-3 px-3.5 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b last:border-b-0"
                           >
-                            <span className="text-sm text-slate-700 truncate">{u.name}</span>
-                            <span className="text-xs text-slate-400 truncate">{u.email}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{u.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</span>
                           </li>
                         ))}
                       </ul>
@@ -489,7 +498,7 @@ export function Approvals() {
                   </div>
                 )}
                 {errorMessage && (
-                  <p className="mt-2 text-xs text-red-600">{errorMessage}</p>
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
                 )}
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>

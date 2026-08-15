@@ -17,7 +17,7 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          "z-50 min-w-[10rem] rounded-lg border border-slate-200 bg-white p-1 shadow-lg outline-none",
+          "z-50 min-w-[10rem] rounded-lg border border-slate-200 bg-popover p-1 text-popover-foreground shadow-lg outline-none dark:border-slate-800",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -39,8 +39,8 @@ export function DropdownMenuItem({
     <DropdownMenuPrimitive.Item
       className={cn(
         "flex cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-1.5 text-sm outline-none transition-colors",
-        "focus:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-        variant === "destructive" ? "text-red-600 focus:bg-red-50" : "text-slate-700",
+        "focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+        variant === "destructive" ? "text-red-600 focus:bg-red-50 dark:text-red-400 dark:focus:bg-red-950/40" : "text-slate-700 dark:text-slate-300",
         className
       )}
       {...props}
@@ -54,7 +54,7 @@ export function DropdownMenuLabel({
 }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label>) {
   return (
     <DropdownMenuPrimitive.Label
-      className={cn("px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400", className)}
+      className={cn("px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500", className)}
       {...props}
     />
   );
@@ -64,5 +64,5 @@ export function DropdownMenuSeparator({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>) {
-  return <DropdownMenuPrimitive.Separator className={cn("my-1 h-px bg-slate-100", className)} {...props} />;
+  return <DropdownMenuPrimitive.Separator className={cn("my-1 h-px bg-slate-100 dark:bg-slate-800", className)} {...props} />;
 }

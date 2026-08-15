@@ -130,6 +130,11 @@ export const AnomalySummarySchema = z.object({
   breakdownByFlowAndOutcome: z.array(
     z.object({ flow: FlowSchema, outcome: z.string(), count: z.number() })
   ),
+  // Pagination applies to whichever of anomalies/allEvents is actually
+  // being shown (see include_normal) -- the aggregate stats above always
+  // stay full/unpaginated.
+  page: z.number(),
+  total: z.number(),
   anomalies: z.array(AnomalyEventSchema),
   allEvents: z.array(AnomalyEventSchema).optional(),
 });

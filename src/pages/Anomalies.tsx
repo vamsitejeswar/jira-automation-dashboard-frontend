@@ -5,6 +5,7 @@ import { AlertTriangle, Info, ChevronUp, ChevronDown, AlertCircle, Activity, Zap
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/ui/preset-picker";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Empty } from "@/components/ui/empty";
@@ -102,6 +103,8 @@ function AnomaliesSkeleton() {
   );
 }
 
+const ANOMALIES_PAGE_SIZE = 50;
+
 export function Anomalies() {
   const [preset, setPreset]           = useState<Preset>("7d");
   const [customFrom, setCustomFrom]   = useState("");
@@ -109,6 +112,7 @@ export function Anomalies() {
   const [includeNormal, setIncludeNormal] = useState(false);
   const [sortField, setSortField]     = useState<"flow" | "outcome" | "count">("count");
   const [sortDir, setSortDir]         = useState<"asc" | "desc">("desc");
+  const [page, setPage]               = useState(1);
 
   const dates = preset === "custom" ? { from: customFrom, to: customTo } : getPresetDates(preset);
   const days   = preset === "today" ? 1 : preset === "custom" ? undefined : parseInt(preset);
@@ -118,12 +122,23 @@ export function Anomalies() {
     from: dates.from || undefined,
     to:   dates.to   || undefined,
     includeNormal,
+    page,
+    pageSize: ANOMALIES_PAGE_SIZE,
   };
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["anomalies", filters],
     queryFn:  () => getAnomalies(filters),
   });
+
+  // Any change to what's being scanned (date range, include-normal) starts
+  // back at page 1 -- the previous page number almost never lines up with
+  // a totally different result set.
+  function updatePreset(p: Preset) { setPreset(p); setPage(1); }
+  function updateIncludeNormal(v: boolean) { setIncludeNormal(v); setPage(1); }
+  function updateCustomRange(f: string, t: string) {
+    setCustomFrom(f); setCustomTo(t); setPreset("custom"); setPage(1);
+  }
 
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -173,20 +188,20 @@ export function Anomalies() {
         {/* Filter bar */}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {/* Preset quick picks */}
-          <PresetPicker options={PRESETS} value={preset} onChange={setPreset} />
+          <PresetPicker options={PRESETS} value={preset} onChange={updatePreset} />
 
           {/* Date range inputs */}
           <DateRangePicker
             from={preset === "custom" ? customFrom : dates.from}
             to={preset === "custom" ? customTo : dates.to}
-            onRangeChange={(f, t) => { setCustomFrom(f); setCustomTo(t); setPreset("custom"); }}
+            onRangeChange={updateCustomRange}
             placeholder="Pick date range"
             className="h-9 text-xs"
           />
 
           {/* Include normal toggle */}
           <label className="ml-auto flex items-center gap-2 cursor-pointer">
-            <ToggleSwitch size="sm" on={includeNormal} onChange={setIncludeNormal} />
+            <ToggleSwitch size="sm" on={includeNormal} onChange={updateIncludeNormal} />
             <span className="text-xs text-slate-600 font-medium">Include normal events</span>
           </label>
         </div>
@@ -298,7 +313,7 @@ export function Anomalies() {
                   {includeNormal ? "All events" : "Anomaly events"}
                 </h2>
                 <span className="ml-auto text-xs text-slate-400 font-medium">
-                  {events.length} total
+                  {data!.total} total
                 </span>
               </div>
               {events.length === 0 ? (
@@ -339,6 +354,37 @@ export function Anomalies() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {data!.total > ANOMALIES_PAGE_SIZE && (
+                <div className="flex items-center justify-between border-t px-5 py-3 text-xs text-slate-500">
+                  <span>
+                    Showing{" "}
+                    <span className="font-semibold text-slate-900">
+                      {(page - 1) * ANOMALIES_PAGE_SIZE + 1}–{Math.min(page * ANOMALIES_PAGE_SIZE, data!.total)}
+                    </span>{" "}
+                    of <span className="font-semibold text-slate-900">{data!.total}</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                      className="h-7 text-xs"
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page * ANOMALIES_PAGE_SIZE >= data!.total}
+                      onClick={() => setPage((p) => p + 1)}
+                      className="h-7 text-xs"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </>

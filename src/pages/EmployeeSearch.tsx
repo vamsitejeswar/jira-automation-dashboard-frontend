@@ -18,11 +18,11 @@ import {
   Database,
   UserX,
   ClipboardList,
-  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { getEmployeeProgress, getEmployeeSearchSuggestions } from "@/api";
 import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
@@ -372,7 +372,7 @@ export function EmployeeSearch() {
               }}
             />
             {suggestionsLoading && (
-              <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 animate-spin" />
+              <Spinner className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
             )}
 
             {showSuggestions && suggestions.length > 0 && (

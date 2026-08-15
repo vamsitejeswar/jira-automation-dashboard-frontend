@@ -106,12 +106,21 @@ export function updateToggle(name: string, value: boolean): Promise<{ toggles: T
   });
 }
 
-export interface AnomalyFilters { days?: number; includeNormal?: boolean; from?: string; to?: string }
+export interface AnomalyFilters {
+  days?: number;
+  includeNormal?: boolean;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 export function getAnomalies(filters: AnomalyFilters = {}): Promise<AnomalySummary> {
   const params = new URLSearchParams();
   params.set("days", String(Math.min(filters.days ?? 7, 30)));
   if (filters.includeNormal) params.set("include_normal", "true");
+  params.set("page", String(filters.page ?? 1));
+  params.set("page_size", String(filters.pageSize ?? 50));
   return fetchJSON(AnomalySummarySchema, `/api/admin/anomalies?${params}`);
 }
 

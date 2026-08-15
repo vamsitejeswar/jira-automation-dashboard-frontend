@@ -253,14 +253,12 @@ export function Overview() {
     <div className="min-h-full bg-slate-50">
       {/* Header — always visible */}
       <div className="border-b bg-white px-8 py-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
-          </div>
-          <GlobalSearchBox />
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Jira onboarding &amp; offboarding automation monitor · IST</p>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
+          <GlobalSearchBox />
           <PresetPicker
             options={(["today", "7d", "30d"] as Preset[]).map((p) => ({ key: p, label: PRESET_LABELS[p] }))}
             value={preset as Preset}

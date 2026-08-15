@@ -1,4 +1,3 @@
-import { Zap } from "lucide-react";
 import { loginUrl } from "@/api";
 
 function GoogleLogo({ className }: { className?: string }) {
@@ -46,7 +45,7 @@ export function Login() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm rounded-2xl border bg-white p-8 shadow-sm text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg">
-          <Zap className="h-6 w-6 text-white" />
+          <img src="/Jira_Logo.svg" alt="Jira Automation" className="h-8 w-8 object-contain" />
         </div>
         <h1 className="mt-4 text-xl font-bold text-slate-900">Jira Automation Dashboard</h1>
         <p className="mt-1.5 text-sm text-slate-500">Sign in with your work Google account to continue.</p>

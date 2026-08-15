@@ -6,7 +6,6 @@ import {
   Ticket,
   AlertTriangle,
   ScrollText,
-  Zap,
   UserSearch,
   MailCheck,
   Settings,
@@ -44,7 +43,11 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 border-b border-slate-100">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-lg flex-shrink-0">
-          <Zap className="h-4 w-4 text-white" />
+          <img
+            src="/Jira_Logo.svg"
+            alt="Jira Automation"
+            className="h-8 w-8 object-contain"
+          />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-bold text-slate-900 leading-none truncate">Jira Automation</p>
@@ -85,11 +88,20 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-5 py-4 border-t border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0">
-            <span className="text-xs font-bold text-blue-600">
-              {(me.data?.email ?? "?").charAt(0).toUpperCase()}
-            </span>
-          </div>
+          {me.data?.picture ? (
+            <img
+              src={me.data.picture}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 flex-shrink-0">
+              <span className="text-xs font-bold text-blue-600">
+                {(me.data?.email ?? "?").charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-900 truncate">{me.data?.email ?? "..."}</p>
             <p className="text-[10px] truncate text-slate-400">Administrator</p>

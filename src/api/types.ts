@@ -280,5 +280,6 @@ export type AuditLogResponse = z.infer<typeof AuditLogResponseSchema>;
 // ── Auth ───────────────────────────────────────────────────────────────────────
 export const MeSchema = z.object({
   email: z.string(),
+  picture: z.string().nullable(),
 });
 export type Me = z.infer<typeof MeSchema>;

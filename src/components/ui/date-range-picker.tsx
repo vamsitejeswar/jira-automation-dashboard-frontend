@@ -16,9 +16,14 @@ import {
 export function DatePickerWithRange({
   value,
   onChange,
+  align = "start",
 }: {
   value?: DateRange
   onChange?: (range: DateRange | undefined) => void
+  // "end" for a trigger sitting near the right edge of the viewport (e.g.
+  // Overview's header) -- the two-month calendar is wide enough to clip
+  // past the right edge with the default "start" alignment there.
+  align?: "start" | "center" | "end"
 } = {}) {
   const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 20),
@@ -41,7 +46,7 @@ export function DatePickerWithRange({
         ) : (
           <span>Pick a date</span>
         )}</Button>} />
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align={align}>
         <Calendar
           mode="range"
           defaultMonth={date?.from}

@@ -155,6 +155,12 @@ export function Anomalies() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["anomalies", filters],
     queryFn:  () => getAnomalies(filters),
+    // A schema mismatch (e.g. a flow/severity value the frontend doesn't
+    // know yet) throws inside zod .parse(), not a transient network blip --
+    // retrying it 3x with backoff just makes the skeleton spin for 7+
+    // seconds before the (identical) error finally surfaces. Fail once,
+    // show ErrorState immediately -- Retry there re-fetches on demand.
+    retry: false,
   });
 
   // Any change to what's being scanned starts back at page 1 -- the
@@ -424,7 +430,9 @@ export function Anomalies() {
                 </span>
               </div>
               {events.length === 0 ? (
-                <EmptyState message="No events to show for this filter" />
+                <EmptyState
+                  message={includeNormal ? "No events logged in this period" : "No failures in this period"}
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

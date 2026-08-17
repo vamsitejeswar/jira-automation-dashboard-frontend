@@ -319,6 +319,7 @@ export function Overview() {
           <GlobalSearchBox />
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={setPreset} />
           <DatePickerWithRange
+            align="end"
             value={{ from: parseYMD(dates.from), to: parseYMD(dates.to) }}
             onChange={(range: DateRange | undefined) => {
               setCustomFrom(range?.from ? format(range.from, "yyyy-MM-dd") : "");

@@ -24,7 +24,7 @@ import type { Toggle, ToggleName, ConfigValue, ConfigName } from "@/api";
 const TOGGLE_LABELS: Record<ToggleName, string> = {
   automation_enabled:           "Automation",
   email_sending_enabled:        "Email Sending",
-  gws_account_creation_enabled: "Google Woskspace Account Creation",
+  gws_account_creation_enabled: "Google Workspace Account Creation",
   retry_on_update_enabled:      "Retry On Update",
   akamai_enabled:               "Akamai",
   gws_account_suspend_enabled:  "Google Workspace Account Suspend",
@@ -396,6 +396,10 @@ function ConfigTab() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["config"],
     queryFn:  getConfig,
+    // Same reasoning as the Anomalies query -- a missing label/description
+    // from the backend is a schema mismatch, not a transient failure, so
+    // retrying 3x with backoff just delays the (identical) error.
+    retry: false,
   });
 
   const mutation = useMutation({

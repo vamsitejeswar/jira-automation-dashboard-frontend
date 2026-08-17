@@ -36,7 +36,12 @@ const NAV_GROUPS: { title: string | null; items: { to: string; icon: React.Eleme
   { title: null, items: [{ to: "/settings", icon: Settings, label: "Settings" }] },
 ];
 
-export function Sidebar() {
+// One props-configurable inner layout, rendered twice by the exported
+// Sidebar below -- a permanently visible lg:+ column, and (below lg:) a
+// slide-over drawer triggered by AppLayout's hamburger button. Sharing this
+// keeps nav/logout logic in exactly one place instead of two components
+// drifting apart.
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   // Already fetched (and cached under the same key) by AuthGate on page
@@ -50,7 +55,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200 dark:bg-neutral-900 dark:border-neutral-800">
+    <>
       {/* Logo */}
       <div className="flex h-20 items-center gap-3 px-5 border-b border-slate-100 dark:border-neutral-800">
         <div className="flex not-only:items-center justify-center rounded-lgflex-shrink-0">
@@ -83,6 +88,7 @@ export function Sidebar() {
                   <NavLink
                     to={to}
                     end={to === "/"}
+                    onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
@@ -132,6 +138,31 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
+  return (
+    <>
+      {/* Permanent column on desktop -- hidden entirely below lg: so it
+          never competes with page content for the ~390px a phone actually
+          has (was previously always rendered at a fixed 240px, see
+          docs/UI_BUG_REPORT.md Bug 1). */}
+      <aside className="hidden lg:flex h-full w-60 flex-col flex-shrink-0 bg-white border-r border-slate-200 dark:bg-neutral-900 dark:border-neutral-800">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile slide-over, triggered by AppLayout's hamburger button.
+          Closes on backdrop click or on picking a nav item. */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <aside className="relative flex h-full w-64 max-w-[80vw] flex-col bg-white border-r border-slate-200 shadow-xl dark:bg-neutral-900 dark:border-neutral-800">
+            <SidebarContent onNavigate={onClose} />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

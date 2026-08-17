@@ -60,7 +60,7 @@ export function Schedules() {
       <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Schedules</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-          Every scheduled job and what happened, ticket by ticket, on each of its runs.
+          View scheduled jobs and their per-ticket run history.
         </p>
 
         {/* Job picker */}

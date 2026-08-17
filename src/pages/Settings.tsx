@@ -92,7 +92,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    ["automation_enabled", "email_sending_enabled"],
   },
   {
-    title:    "On-Boarding",
+    title:    "Onboarding",
     subtitle: "Controls for new employee onboarding flows",
     names:    ["gws_account_creation_enabled", "retry_on_update_enabled"],
   },
@@ -102,7 +102,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    ["akamai_enabled"],
   },
   {
-    title:    "Off-Boarding",
+    title:    "Offboarding",
     subtitle: "Controls for departing employee offboarding flows",
     names:    ["gws_account_suspend_enabled", "data_transfer_enabled", "ad_disable_enabled", "m365_disable_enabled"],
   },
@@ -262,7 +262,7 @@ function ConfigRow({
               <AlertDialogHeader>
                 <AlertDialogTitle>Save {config.label}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This updates the live value used by automation immediately.
+                  This change takes effect immediately.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

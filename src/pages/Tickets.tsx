@@ -74,7 +74,7 @@ function RetryCredentialEmailCell({ ticket }: { ticket: TicketSummary }) {
       qc.invalidateQueries({ queryKey: ["kpis"] });
       const sent = data.status === "succeeded";
       toast.add({
-        title: sent ? "Resent" : "Retry failed again",
+        title: sent ? "Resent" : "Resend failed",
         description: sent
           ? `${ticket.issueKey}'s credentials email was resent successfully.`
           : `${ticket.issueKey} still couldn't be sent (${data.status}).`,

@@ -50,23 +50,23 @@ const STATUS_CONFIG: Record<ApprovalStatus, {
 }> = {
   pending: {
     label: "Pending", icon: Clock, bg: "#fffbeb", color: "#b45309", darkBg: "#451a03", darkColor: "#fcd34d", dot: "#d97706",
-    description: "Decision email sent and being actively tracked -- will be reminded up to 3 times if the manager doesn't respond.",
+    description: "Decision email sent. The manager will be reminded up to 3 times if there is no response.",
   },
   approved: {
     label: "Approved", icon: CheckCircle2, bg: "#f0fdf4", color: "#15803d", darkBg: "#022c22", darkColor: "#6ee7b7", dot: "#16a34a",
-    description: "The manager (or an admin, manually) already made a decision -- access cloned, no action needed, or the Drive transfer completed.",
+    description: "The manager or an admin has made a decision. Access was cloned, the Drive transfer completed, or no action was required.",
   },
   ignored: {
     label: "Ignored", icon: Ban, bg: "#f8fafc", color: "#475569", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8",
-    description: "No email was ever sent -- required info (manager or employee email) was missing on the ticket.",
+    description: "No email was sent. Required information such as the manager or employee email was missing from the ticket.",
   },
   no_response: {
     label: "No Response", icon: AlertOctagon, bg: "#fef2f2", color: "#b91c1c", darkBg: "#450a0a", darkColor: "#fca5a5", dot: "#dc2626",
-    description: "Reminded 3 times with no reply -- the automation gave up and commented on the ticket instead.",
+    description: "The manager was reminded 3 times with no reply. Automation has commented on the ticket and stopped.",
   },
   failed: {
     label: "Failed", icon: XCircle, bg: "#fef2f2", color: "#b91c1c", darkBg: "#450a0a", darkColor: "#fca5a5", dot: "#dc2626",
-    description: "Sending the decision email itself failed (e.g. an SMTP error) -- no email ever reached the manager.",
+    description: "The decision email failed to send. The manager did not receive it.",
   },
   // The email went out but there's no live pending_approvals record for it
   // (e.g. sent by a revision deployed before reminder-tracking existed) --
@@ -74,7 +74,7 @@ const STATUS_CONFIG: Record<ApprovalStatus, {
   // approved/rejected from here either (see ApprovalRow's Actions gating).
   untracked: {
     label: "Untracked", icon: HelpCircle, bg: "#f8fafc", color: "#64748b", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8",
-    description: "Email sent before this dashboard's reminder-tracking existed -- won't be reminded or actionable here. The manager's original email link still works fine.",
+    description: "This email was sent before reminder tracking was introduced. It will not be reminded or actioned here. The manager's original link still works.",
   },
 };
 
@@ -173,7 +173,7 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
           ),
         }
       : {
-          title: "Send to common address",
+          title: "Send to Common Address",
           description: (
             <>
               Transfers <strong>{who}</strong>'s Drive files to the common fallback address instead of the manager,
@@ -184,7 +184,7 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
   }
   return kind === "approve"
     ? {
-        title: "Clone Akamai / ZScaler access",
+        title: "Clone Akamai / ZScaler Access",
         description: (
           <>
             Clones the selected account's group access onto <strong>{who}</strong> immediately. Enter the Google
@@ -325,7 +325,7 @@ function ApprovalRow({
                 onClick={() => onResolve(approval)}
               >
                 {resolving ? <Spinner className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                Resolved
+                Mark as Done
               </Button>
             )}
           </div>
@@ -420,7 +420,7 @@ export function Approvals() {
       setResolveComment("");
     },
     onError: (_err, approval) => {
-      toast.add({ title: "Couldn't resolve", description: `Failed to mark ${approval.issueKey} resolved.` });
+      toast.add({ title: "Failed to Resolve", description: `Could not resolve ${approval.issueKey}.` });
     },
   });
 
@@ -514,8 +514,7 @@ export function Approvals() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Approvals</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-              Mail Approval tickets — Akamai Access setup and Drive Transfer requests awaiting or resolved
-              via a manager decision email.
+              Akamai access and Drive Transfer requests resolved through manager decision emails.
             </p>
           </div>
         </div>
@@ -719,10 +718,9 @@ export function Approvals() {
           {pendingResolve && (
             <>
               <AlertDialogHeader>
-                <AlertDialogTitle>Mark resolved</AlertDialogTitle>
+                <AlertDialogTitle>Mark as Resolved</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Closes {pendingResolve.issueKey} without running the clone-from-employee automation — use this
-                  when IT already handled the access request manually (e.g. directly in the GWS console).
+                  Closes {pendingResolve.issueKey} without running the clone automation. Use this when IT has already handled the access request manually, for example directly in the GWS console.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="mt-3">

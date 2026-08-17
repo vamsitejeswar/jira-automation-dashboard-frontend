@@ -25,7 +25,7 @@ const NAV_GROUPS: { title: string | null; items: { to: string; icon: React.Eleme
       { to: "/tickets", icon: Ticket, label: "All Tickets" },
     ],
   },
-  { title: "Needs a decision", items: [{ to: "/approvals", icon: MailCheck, label: "Approvals" }] },
+  { title: "Needs a Decision", items: [{ to: "/approvals", icon: MailCheck, label: "Approvals" }] },
   {
     title: "System Health",
     items: [

@@ -35,10 +35,10 @@ export function Login() {
   const error = params.get("error");
   const ERROR_MESSAGES: Record<string, string> = {
     access_denied: "Sign-in was cancelled.",
-    invalid_state: "That sign-in link expired or was already used -- try again.",
-    domain_not_allowed: "That Google account isn't allowed to access this dashboard.",
-    token_exchange_failed: "Google sign-in failed -- please try again.",
-    userinfo_failed: "Google sign-in failed -- please try again.",
+    invalid_state: "That sign-in link has expired or was already used. Try again.",
+    domain_not_allowed: "That Google account is not allowed to access this dashboard.",
+    token_exchange_failed: "Google sign-in failed. Please try again.",
+    userinfo_failed: "Google sign-in failed. Please try again.",
   };
 
   return (
@@ -52,7 +52,7 @@ export function Login() {
 
         {error && (
           <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400">
-            {ERROR_MESSAGES[error] ?? "Something went wrong signing in -- please try again."}
+            {ERROR_MESSAGES[error] ?? "Something went wrong. Please try again."}
           </p>
         )}
 

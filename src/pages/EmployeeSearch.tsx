@@ -209,12 +209,6 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 text-sm font-bold text-white"
-            style={{ background: isOnboarding ? "#2563eb" : "#7c3aed" }}
-          >
-            {isOnboarding ? "ON" : "OFF"}
-          </div>
           <div className="min-w-0 flex-1">
             <Tooltip>
               <TooltipTrigger

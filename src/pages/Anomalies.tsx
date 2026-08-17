@@ -245,7 +245,7 @@ export function Anomalies() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Failures &amp; History</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-              Every automation event, filterable down to just the ones that need attention.
+              All automation events. Use filters to focus on failures.
             </p>
           </div>
           <div className="flex items-center gap-2">

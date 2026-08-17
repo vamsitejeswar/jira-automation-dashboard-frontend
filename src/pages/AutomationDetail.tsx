@@ -149,7 +149,7 @@ export function AutomationDetail() {
           <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b">
               <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Recent runs</h2>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">{data!.ticketCount} tickets touched this flow in the last 30 days</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">{data!.ticketCount} tickets were processed by this automation in the last 30 days</p>
             </div>
             {data!.recentEvents.length === 0 ? (
               <EmptyState message="No runs logged for this automation in the last 30 days" />

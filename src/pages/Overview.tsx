@@ -132,7 +132,7 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
           </div>
         </div>
         {live ? (
-          <div className="mt-4 text-xs text-slate-400 dark:text-neutral-500">Live count, not date-ranged</div>
+          <div className="mt-4 text-xs text-slate-400 dark:text-neutral-500">Live total. Not filtered by date.</div>
         ) : hasTrend ? (
           <div className="mt-4 flex items-center gap-1.5 text-xs">
             <TrendIcon className="h-3.5 w-3.5" style={{ color: trendColor }} />
@@ -140,7 +140,7 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
             <span className="text-slate-400 dark:text-neutral-500">vs previous period</span>
           </div>
         ) : (
-          <div className="mt-4 text-xs text-slate-400 dark:text-neutral-500">No prior-period data yet to compare</div>
+          <div className="mt-4 text-xs text-slate-400 dark:text-neutral-500">No comparison data available</div>
         )}
       </div>
       <div className="border-t border-slate-100 px-5 py-2.5 dark:border-neutral-800">
@@ -305,7 +305,23 @@ export function Overview() {
   // everything still-broken shows a distinct "caught up, but dismissed
   // items exist" state instead of falsely claiming full health.
   const systemHealthy = attentionItems.length === 0;
-  const allDismissed = attentionItems.length > 0 && visibleAttentionItems.length === 0;
+  const allDismissed  = attentionItems.length > 0 && visibleAttentionItems.length === 0;
+
+  function getAlertMeta(id: string): { type: string; severity: "critical" | "warning" } {
+    if (id.startsWith("integration:")) return { type: "Infra",    severity: "critical" };
+    if (id.startsWith("job:"))         return { type: "Job",      severity: "critical" };
+    if (id === "failures")             return { type: "Failure",  severity: "critical" };
+    return                                    { type: "Approval", severity: "warning"  };
+  }
+
+  const criticalItems = visibleAttentionItems.filter((i) => getAlertMeta(i.id).severity === "critical");
+  const warningItems  = visibleAttentionItems.filter((i) => getAlertMeta(i.id).severity === "warning");
+
+  function dismissAll() {
+    const next = new Set([...dismissedIds, ...visibleAttentionItems.map((i) => i.id)]);
+    setDismissedIds(next);
+    localStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify([...next]));
+  }
 
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
@@ -313,7 +329,7 @@ export function Overview() {
       <div className="border-b bg-white px-8 py-6 dark:bg-neutral-900">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-neutral-100">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Jira onboarding &amp; offboarding automation monitor · IST</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Jira onboarding and offboarding automation monitor</p>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <GlobalSearchBox />
@@ -337,69 +353,133 @@ export function Overview() {
         <div className="px-8 py-6"><ErrorState error={kpis.error as Error} onRetry={kpis.refetch} /></div>
       ) : (
         <div className="px-4 py-4 space-y-4">
-          {/* System status + needs-attention -- the one-sentence answer to
-              "is this healthy right now," before any other detail. */}
-          <div
-            className={`rounded-xl border px-5 py-4 shadow-sm ${
-              systemHealthy
-                ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900/50"
-                : allDismissed
-                ? "bg-slate-50 border-slate-200 dark:bg-neutral-900 dark:border-neutral-800"
-                : "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                  systemHealthy ? "bg-emerald-500" : allDismissed ? "bg-slate-400 dark:bg-neutral-600" : "bg-amber-500"
-                }`}
-              />
-              <p className={`text-sm font-bold ${
-                systemHealthy
-                  ? "text-emerald-800 dark:text-emerald-300"
-                  : allDismissed
-                  ? "text-slate-600 dark:text-neutral-400"
-                  : "text-amber-800 dark:text-amber-300"
-              }`}>
-                {systemHealthy
-                  ? "All systems operational"
-                  // Deliberately NOT styled like the real all-clear above --
-                  // dismissing just hides the reminder, it doesn't mean the
-                  // pending approval/failure/outage actually went away.
-                  : allDismissed
-                  ? "Notifications hidden — the underlying items are still unresolved"
-                  : "Action needed"}
-              </p>
+          {/* System status — three distinct states:
+              1. All clear  → compact emerald pill
+              2. All dismissed → muted pill with recover link
+              3. Action needed → severity-grouped card with per-row left border */}
+          {systemHealthy ? (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">All systems operational</p>
             </div>
-            {visibleAttentionItems.length > 0 && (
-              <ul className="mt-2.5 space-y-1.5">
-                {visibleAttentionItems.map((item) => (
-                  <li key={item.id} className="flex items-center gap-3">
-                    <Link to={item.to} className="text-sm font-medium text-amber-800 hover:underline dark:text-amber-300">
-                      {item.text} →
-                    </Link>
-                    <button
-                      onClick={() => dismiss(item.id)}
-                      className="ml-auto shrink-0 text-xs font-medium text-amber-700/70 hover:text-amber-900 hover:underline dark:text-amber-400/70 dark:hover:text-amber-200"
-                    >
-                      Ignore
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {dismissedCount > 0 && (
+          ) : allDismissed ? (
+            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-neutral-400 dark:bg-neutral-600" />
+              <p className="text-sm text-slate-500 dark:text-neutral-400">Notifications are muted. These items are still unresolved.</p>
               <button
-                onClick={() => {
-                  setDismissedIds(new Set());
-                  localStorage.removeItem(DISMISSED_STORAGE_KEY);
-                }}
-                className="mt-2.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline dark:text-neutral-400 dark:hover:text-neutral-300"
+                onClick={() => { setDismissedIds(new Set()); localStorage.removeItem(DISMISSED_STORAGE_KEY); }}
+                className="ml-auto shrink-0 text-xs font-medium text-slate-400 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
               >
-                Show {dismissedCount} dismissed item{dismissedCount === 1 ? "" : "s"}
+                Show {dismissedCount} dismissed
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden dark:border-neutral-800 dark:bg-neutral-900">
+
+              {/* Header */}
+              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
+                <span className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Action needed</span>
+                <div className="flex items-center gap-1.5 ml-1">
+                  {criticalItems.length > 0 && (
+                    <span className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-500 border border-red-500/20 dark:bg-red-500/15 dark:border-red-500/25">
+                      {criticalItems.length} critical
+                    </span>
+                  )}
+                  {warningItems.length > 0 && (
+                    <span className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25">
+                      {warningItems.length} warning
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={dismissAll}
+                  className="ml-auto text-[11px] text-slate-400 hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300 px-2 py-1 rounded transition-colors hover:bg-slate-50 dark:hover:bg-neutral-800"
+                >
+                  Dismiss all
+                </button>
+              </div>
+
+              {/* Critical rows */}
+              {criticalItems.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-[.14em] font-mono text-red-500">Critical</span>
+                    <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+                  </div>
+                  {criticalItems.map((item) => (
+                    <div key={item.id} className="flex items-center border-t border-neutral-100 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                      <div className="w-[3px] self-stretch shrink-0 bg-red-500" />
+                      <span className="text-[9px] font-bold uppercase tracking-[.14em] font-mono text-slate-400 dark:text-neutral-500 w-20 shrink-0 pl-3">
+                        {getAlertMeta(item.id).type}
+                      </span>
+                      <div className="w-px h-5 bg-slate-200 dark:bg-neutral-700 shrink-0 mx-3" />
+                      <span className="flex-1 text-[12.5px] text-slate-800 dark:text-neutral-200 py-2.5 min-w-0">{item.text}</span>
+                      <Link
+                        to={item.to}
+                        className="text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-2 py-1 rounded transition-colors shrink-0 whitespace-nowrap"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => dismiss(item.id)}
+                        className="text-xs text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800 w-8 h-8 flex items-center justify-center rounded transition-colors mx-2 shrink-0"
+                        title="Dismiss"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Warning rows */}
+              {warningItems.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-[.14em] font-mono text-amber-500 dark:text-amber-400">Warning</span>
+                    <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+                  </div>
+                  {warningItems.map((item) => (
+                    <div key={item.id} className="flex items-center border-t border-neutral-100 dark:border-neutral-800 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                      <div className="w-[3px] self-stretch shrink-0 bg-amber-500" />
+                      <span className="text-[9px] font-bold uppercase tracking-[.14em] font-mono text-slate-400 dark:text-neutral-500 w-20 shrink-0 pl-3">
+                        {getAlertMeta(item.id).type}
+                      </span>
+                      <div className="w-px h-5 bg-slate-200 dark:bg-neutral-700 shrink-0 mx-3" />
+                      <span className="flex-1 text-[12.5px] text-slate-800 dark:text-neutral-200 py-2.5 min-w-0">{item.text}</span>
+                      <Link
+                        to={item.to}
+                        className="text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-2 py-1 rounded transition-colors shrink-0 whitespace-nowrap"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => dismiss(item.id)}
+                        className="text-xs text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800 w-8 h-8 flex items-center justify-center rounded transition-colors mx-2 shrink-0"
+                        title="Dismiss"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Recover dismissed items */}
+              {dismissedCount > 0 && (
+                <div className="px-4 py-2.5 border-t border-neutral-100 dark:border-neutral-800">
+                  <button
+                    onClick={() => { setDismissedIds(new Set()); localStorage.removeItem(DISMISSED_STORAGE_KEY); }}
+                    className="text-[11px] text-slate-400 hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors"
+                  >
+                    Show {dismissedCount} dismissed item{dismissedCount === 1 ? "" : "s"}
+                  </button>
+                </div>
+              )}
+
+            </div>
+          )}
 
           {/* Integration health -- so a real Jira/GWS/AD/M365 outage reads
               as exactly that, not as an unexplained pile of failed events. */}

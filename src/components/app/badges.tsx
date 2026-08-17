@@ -81,6 +81,13 @@ export function OutcomeBadge({ outcome }: { outcome: string }) {
   );
 }
 
+const SEVERITY_LABEL: Record<string, string> = {
+  INFO: "Info",
+  WARNING: "Warning",
+  ERROR: "Error",
+  DEFAULT: "Default",
+};
+
 export function SeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, StatusKey> = {
     INFO: "info",
@@ -91,7 +98,7 @@ export function SeverityBadge({ severity }: { severity: string }) {
   const key = map[severity] ?? "muted";
   return (
     <Badge variant="ghost" className={STATUS_STYLE[key]}>
-      {severity}
+      {SEVERITY_LABEL[severity] ?? severity}
     </Badge>
   );
 }
@@ -103,7 +110,7 @@ const FLOW_CONFIG: Record<string, { label: string; style: StatusKey }> = {
   gws_suspend: { label: "Account Suspension", style: "orange" },
   scheduled_credentials: { label: "Credentials", style: "success" },
   data_transfer: { label: "Data Transfer", style: "orange" },
-  toggle_change: { label: "Toggle", style: "muted" },
+  toggle_change: { label: "Toggle Change", style: "muted" },
   // "error" was wrong here -- that's a status/severity color, and this is
   // just the flow category, so a fully successful disable was showing up
   // red regardless of outcome. The Status badge already carries the real

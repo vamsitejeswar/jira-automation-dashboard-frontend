@@ -340,20 +340,33 @@ export function Overview() {
               "is this healthy right now," before any other detail. */}
           <div
             className={`rounded-xl border px-5 py-4 shadow-sm ${
-              systemHealthy || allDismissed ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900/50" : "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50"
+              systemHealthy
+                ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900/50"
+                : allDismissed
+                ? "bg-slate-50 border-slate-200 dark:bg-neutral-900 dark:border-neutral-800"
+                : "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50"
             }`}
           >
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                  systemHealthy || allDismissed ? "bg-emerald-500" : "bg-amber-500"
+                  systemHealthy ? "bg-emerald-500" : allDismissed ? "bg-slate-400 dark:bg-neutral-600" : "bg-amber-500"
                 }`}
               />
-              <p className={`text-sm font-bold ${systemHealthy || allDismissed ? "text-emerald-800 dark:text-emerald-300" : "text-amber-800 dark:text-amber-300"}`}>
+              <p className={`text-sm font-bold ${
+                systemHealthy
+                  ? "text-emerald-800 dark:text-emerald-300"
+                  : allDismissed
+                  ? "text-slate-600 dark:text-neutral-400"
+                  : "text-amber-800 dark:text-amber-300"
+              }`}>
                 {systemHealthy
                   ? "All systems operational"
+                  // Deliberately NOT styled like the real all-clear above --
+                  // dismissing just hides the reminder, it doesn't mean the
+                  // pending approval/failure/outage actually went away.
                   : allDismissed
-                  ? "All clear — dismissed items hidden below"
+                  ? "Notifications hidden — the underlying items are still unresolved"
                   : "Action needed"}
               </p>
             </div>

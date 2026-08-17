@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, MailOpen, ShieldCheck, HardDrive, Key, Lock, UserX, Clock,
+  ArrowLeft, MailOpen, ShieldCheck, HardDrive, Key, Lock, UserX, Clock, Database, ToggleLeft,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { OutcomeBadge, SeverityBadge, isSelfEvidentError } from "@/components/app/badges";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Pagination } from "@/components/app/pagination";
 import { getAutomationDetail } from "@/api";
 import { formatIST } from "@/lib/utils";
+
+const RECENT_EVENTS_PAGE_SIZE = 25;
 
 // One place holding what a non-technical admin actually needs to know about
 // each automation -- plain-language name and sentence, not the raw flow
@@ -40,6 +44,14 @@ const AUTOMATION_META: Record<string, { label: string; icon: React.ElementType; 
     label: "AD / M365 Disable", icon: UserX, color: "#b91c1c",
     blurb: "Disables a departing employee's on-premise Active Directory and Microsoft 365/Entra ID accounts and emails their manager.",
   },
+  data_transfer: {
+    label: "Data Transfer", icon: Database, color: "#0891b2",
+    blurb: "Transfers a departing employee's Drive files to their manager once the request is accepted.",
+  },
+  toggle_change: {
+    label: "Toggle Change", icon: ToggleLeft, color: "#64748b",
+    blurb: "Records when an admin turns one of the automation toggles in Settings on or off.",
+  },
 };
 
 function AutomationDetailSkeleton() {
@@ -59,10 +71,11 @@ function AutomationDetailSkeleton() {
 export function AutomationDetail() {
   const { flow } = useParams<{ flow: string }>();
   const meta = flow ? AUTOMATION_META[flow] : undefined;
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["automation-detail", flow],
-    queryFn: () => getAutomationDetail(flow!),
+    queryKey: ["automation-detail", flow, page],
+    queryFn: () => getAutomationDetail(flow!, 30, page, RECENT_EVENTS_PAGE_SIZE),
     enabled: !!flow,
   });
 
@@ -182,6 +195,15 @@ export function AutomationDetail() {
               </div>
             )}
           </div>
+          {data!.recentEventsTotal > 0 && (
+            <Pagination
+              page={page}
+              pageSize={RECENT_EVENTS_PAGE_SIZE}
+              total={data!.recentEventsTotal}
+              onPageChange={setPage}
+              itemLabel="runs"
+            />
+          )}
         </div>
       )}
     </div>

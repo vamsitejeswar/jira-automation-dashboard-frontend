@@ -7,6 +7,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// "ad" is always the Active Directory abbreviation in this app's outcomes
+// (ad_disable_failed, ad_account_not_found, ...), never the English word --
+// title-casing it word-by-word would otherwise read "Ad Disable Failed".
+const ACRONYMS = new Set(["ad"]);
+
 // Every raw snake_case value from the backend (outcomes, toggle names, ...)
 // goes through this before it's shown as a chip/label anywhere in the app,
 // so "invalid_email" reads as "Invalid Email", not "invalid email".
@@ -14,7 +19,11 @@ export function titleCase(value: string): string {
   return value
     .replace(/_/g, " ")
     .split(" ")
-    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
+    .map((word) => {
+      if (!word) return word;
+      if (ACRONYMS.has(word.toLowerCase())) return word.toUpperCase();
+      return word[0].toUpperCase() + word.slice(1);
+    })
     .join(" ");
 }
 

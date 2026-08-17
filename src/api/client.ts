@@ -169,15 +169,31 @@ export function getEmployeeSearchSuggestions(query: string): Promise<EmployeeSea
   return fetchJSON(EmployeeSearchSuggestionsSchema, `/api/admin/employees/suggestions?${params}`);
 }
 
-export function getApprovals(status?: string): Promise<ApprovalsResponse> {
+export interface ApprovalFilters {
+  status?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function getApprovals(filters: ApprovalFilters = {}): Promise<ApprovalsResponse> {
   const params = new URLSearchParams();
-  if (status) params.set("status", status);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.q) params.set("q", filters.q);
+  params.set("page", String(filters.page ?? 1));
+  params.set("page_size", String(filters.pageSize ?? 25));
   return fetchJSON(ApprovalsResponseSchema, `/api/admin/approvals?${params}`);
 }
 
-export interface ApprovalActionBody { cloneFromEmail?: string; comment?: string }
+// comment is required -- the backend rejects a blank one (400) so every
+// manual approve/reject leaves a real explanation on the ticket.
+export interface ApprovalActionBody { cloneFromEmail?: string; comment: string }
 
-export function approveMailApproval(issueKey: string, body: ApprovalActionBody = {}): Promise<{ status: string; issueKey: string }> {
+export function approveMailApproval(issueKey: string, body: ApprovalActionBody): Promise<{ status: string; issueKey: string }> {
   return fetchJSON(
     z.object({ status: z.string(), issueKey: z.string() }),
     `/api/admin/approvals/${encodeURIComponent(issueKey)}/approve`,
@@ -185,11 +201,46 @@ export function approveMailApproval(issueKey: string, body: ApprovalActionBody =
   );
 }
 
-export function rejectMailApproval(issueKey: string, body: ApprovalActionBody = {}): Promise<{ status: string; issueKey: string }> {
+export function rejectMailApproval(issueKey: string, body: ApprovalActionBody): Promise<{ status: string; issueKey: string }> {
   return fetchJSON(
     z.object({ status: z.string(), issueKey: z.string() }),
     `/api/admin/approvals/${encodeURIComponent(issueKey)}/reject`,
     { method: "POST", body: JSON.stringify(body) }
+  );
+}
+
+// Resends a Mail Approval ticket's setup/decision email after it previously
+// failed to send (e.g. an SMTP outage) -- only actionable while the
+// ticket's status is "failed". See app/routers/admin_api.py's
+// retry_mail_approval.
+export function retryMailApproval(issueKey: string): Promise<{ issueKey: string; flow: string; result: { status: string } }> {
+  return fetchJSON(
+    z.object({ issueKey: z.string(), flow: z.string(), result: z.object({ status: z.string() }) }),
+    `/api/admin/approvals/${encodeURIComponent(issueKey)}/retry`,
+    { method: "POST" }
+  );
+}
+
+// Marks an escalated Akamai ticket (manager wasn't sure, handed it to IT)
+// as resolved manually -- closes the ticket without running the
+// clone-from-employee automation. Only valid on a ticket that's actually
+// escalated; Approve/Reject remain the way to run the real automation.
+// comment is required -- it's what proves what IT actually did.
+export function resolveMailApproval(issueKey: string, comment: string): Promise<{ status: string; issueKey: string }> {
+  return fetchJSON(
+    z.object({ status: z.string(), issueKey: z.string() }),
+    `/api/admin/approvals/${encodeURIComponent(issueKey)}/resolve`,
+    { method: "POST", body: JSON.stringify({ comment }) }
+  );
+}
+
+// Resends a new hire's welcome/credentials email after it previously failed
+// to send (mailbox already exists -- see retry_credential_email).
+export function retryCredentialEmail(issueKey: string): Promise<{ issueKey: string; status: string }> {
+  return fetchJSON(
+    z.object({ issueKey: z.string(), status: z.string() }),
+    `/api/admin/tickets/${encodeURIComponent(issueKey)}/retry-credential-email`,
+    { method: "POST" }
   );
 }
 
@@ -218,8 +269,9 @@ export function getAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogResp
   return fetchJSON(AuditLogResponseSchema, `/api/admin/audit-log?${params}`);
 }
 
-export function getAutomationDetail(flow: string, days = 30): Promise<AutomationDetail> {
-  return fetchJSON(AutomationDetailSchema, `/api/admin/automations/${encodeURIComponent(flow)}?days=${days}`);
+export function getAutomationDetail(flow: string, days = 30, page = 1, pageSize = 25): Promise<AutomationDetail> {
+  const params = new URLSearchParams({ days: String(days), page: String(page), page_size: String(pageSize) });
+  return fetchJSON(AutomationDetailSchema, `/api/admin/automations/${encodeURIComponent(flow)}?${params}`);
 }
 
 export function getIntegrationHealth(): Promise<Health> {

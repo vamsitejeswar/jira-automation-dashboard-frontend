@@ -19,6 +19,7 @@ import {
   UserX,
   ClipboardList,
   Lock,
+  ToggleLeft,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
   scheduled_credentials: { label: "Send Login Credentials",   icon: Key,        color: "#16a34a" },
   data_transfer:         { label: "Data Transfer",            icon: Database,    color: "#0891b2" },
   ad_m365_disable:       { label: "AD / M365 Disable",         icon: UserX,       color: "#b91c1c" },
+  toggle_change:         { label: "Toggle Change",             icon: ToggleLeft, color: "#64748b" },
   manual_task:           { label: "Manual Task",               icon: ClipboardList, color: "#64748b" },
 };
 
@@ -169,17 +171,17 @@ function ProgressRing({ steps }: { steps: FlowStep[] }) {
       <div className="text-xs space-y-1">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          <span className="text-slate-600 dark:text-neutral-400">{done} of {total} done</span>
+          <span className="text-slate-600 dark:text-neutral-400">{done} of {total} Done</span>
         </div>
         {failed > 0 && (
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-            <span className="text-slate-600 dark:text-neutral-400">{failed} failed</span>
+            <span className="text-slate-600 dark:text-neutral-400">{failed} Failed</span>
           </div>
         )}
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-slate-300 inline-block" />
-          <span className="text-slate-500 dark:text-neutral-400">{total - done - failed} pending</span>
+          <span className="text-slate-500 dark:text-neutral-400">{total - done - failed} Pending</span>
         </div>
       </div>
     </div>

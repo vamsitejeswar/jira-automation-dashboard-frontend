@@ -2,15 +2,20 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MailCheck, CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal,
+  MailCheck, CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal, RotateCw, LifeBuoy,
 } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { FlowBadge } from "@/components/app/badges";
+import { SelectField } from "@/components/app/select-field";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -20,10 +25,19 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/toast";
-import { getApprovals, approveMailApproval, rejectMailApproval, searchGwsUsers } from "@/api";
-import type { Approval, ApprovalStatus, GwsUser } from "@/api";
+import { getApprovals, approveMailApproval, rejectMailApproval, retryMailApproval, resolveMailApproval, searchGwsUsers } from "@/api";
+import type { Approval, ApprovalFilters, ApprovalStatus, GwsUser } from "@/api";
 import { formatIST } from "@/lib/utils";
 import { useTheme } from "@/providers/theme-provider";
+import { Pagination } from "@/components/app/pagination";
+
+function parseYMD(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = parse(s, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : undefined;
+}
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 const CLONE_SEARCH_DEBOUNCE_MS = 250;
 
@@ -145,27 +159,46 @@ function actionMenuLabel(flow: string, kind: ActionKind): string {
   return kind === "approve" ? "Clone access from…" : "No action required";
 }
 
-function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string; description: string } {
+function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string; description: React.ReactNode } {
   const who = approval.employeeEmail ?? "this employee";
   if (approval.flow === "drive_transfer") {
     return kind === "approve"
       ? {
           title: "Accept Drive Transfer",
-          description: `Transfers ${who}'s Drive files to their manager (${approval.managerEmail ?? "no manager set"}) right now -- same as the manager clicking "Accept" in the decision email.`,
+          description: (
+            <>
+              Transfers <strong>{who}</strong>'s Drive files to their manager,{" "}
+              <strong>{approval.managerEmail ?? "no manager set"}</strong>, immediately.
+            </>
+          ),
         }
       : {
           title: "Send to common address",
-          description: `Transfers ${who}'s Drive files to the common/fallback address instead of the manager, right now -- same as the manager clicking the common-address link.`,
+          description: (
+            <>
+              Transfers <strong>{who}</strong>'s Drive files to the common fallback address instead of the manager,
+              immediately.
+            </>
+          ),
         };
   }
   return kind === "approve"
     ? {
         title: "Clone Akamai / ZScaler access",
-        description: `Clones the entered account's group access onto ${who} right now -- same as the manager submitting the setup form. Enter the Google Workspace account to clone from below.`,
+        description: (
+          <>
+            Clones the selected account's group access onto <strong>{who}</strong> immediately. Enter the Google
+            Workspace account to clone from below.
+          </>
+        ),
       }
     : {
         title: "No action required",
-        description: `Marks this Akamai Access request as needing no additional group access for ${who} -- same as the manager clicking "No Action Required".`,
+        description: (
+          <>
+            Marks this Akamai Access request as requiring no additional group access for <strong>{who}</strong>.
+          </>
+        ),
       };
 }
 
@@ -174,8 +207,23 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
 // that should catch the eye instead of something you have to compute.
 function WaitingAge({ since }: { since: string | null }) {
   if (!since) return null;
-  const days = Math.floor((Date.now() - new Date(since).getTime()) / 86_400_000);
-  if (days < 1) return <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500">just now</span>;
+  const minutesElapsed = Math.floor((Date.now() - new Date(since).getTime()) / 60_000);
+
+  if (minutesElapsed < 1) {
+    return <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500">just now</span>;
+  }
+  if (minutesElapsed < 60) {
+    return (
+      <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500">
+        waiting {minutesElapsed}m
+      </span>
+    );
+  }
+  const hours = Math.floor(minutesElapsed / 60);
+  if (hours < 24) {
+    return <span className="text-[11px] font-medium text-slate-400 dark:text-neutral-500">waiting {hours}h</span>;
+  }
+  const days = Math.floor(hours / 24);
   const urgent = days >= 3;
   return (
     <span className={`text-[11px] font-semibold ${urgent ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-neutral-500"}`}>
@@ -184,7 +232,16 @@ function WaitingAge({ since }: { since: string | null }) {
   );
 }
 
-function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a: PendingAction) => void }) {
+function ApprovalRow({
+  approval, onAction, onRetry, retrying, onResolve, resolving,
+}: {
+  approval: Approval;
+  onAction: (a: PendingAction) => void;
+  onRetry: (a: Approval) => void;
+  retrying: boolean;
+  onResolve: (a: Approval) => void;
+  resolving: boolean;
+}) {
   return (
     <tr className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
       <td className="px-5 py-3 whitespace-nowrap">
@@ -201,39 +258,88 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
       <td className="px-5 py-3">
         <div className="flex items-center gap-2">
           <StatusBadge status={approval.status} />
-          {approval.status === "pending" && <WaitingAge since={approval.updatedAt} />}
+          {approval.status === "pending" && !approval.escalated && <WaitingAge since={approval.updatedAt} />}
+          {approval.escalated && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="inline-flex cursor-default items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                    <LifeBuoy className="h-3 w-3" />
+                    Escalated to IT
+                  </span>
+                }
+              />
+              <TooltipContent>The manager wasn't sure what access to grant and handed this to IT instead of deciding.</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </td>
-      <td className="px-5 py-3 text-xs text-slate-600 dark:text-neutral-400 max-w-56 truncate">{approval.employeeEmail ?? "—"}</td>
+      <td className="px-5 py-3 text-xs max-w-56 truncate">
+        {approval.employeeEmail ? (
+          <Link
+            to={`/employees?q=${encodeURIComponent(approval.employeeEmail)}`}
+            className="text-blue-600 hover:underline"
+          >
+            {approval.employeeEmail}
+          </Link>
+        ) : (
+          <span className="text-slate-600 dark:text-neutral-400">—</span>
+        )}
+      </td>
       <td className="px-5 py-3 text-xs text-slate-600 dark:text-neutral-400 max-w-56 truncate">{approval.managerEmail ?? "—"}</td>
       <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
         {formatIST(approval.updatedAt)}
       </td>
       <td className="px-5 py-3 whitespace-nowrap">
         {approval.status === "pending" ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
-                Actions
-                {approval.reminderCount > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 px-1 text-[10px] font-semibold text-slate-600 dark:text-neutral-400">
-                    {approval.reminderCount}
-                  </span>
-                )}
-                <MoreHorizontal className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                  Actions
+                  {approval.reminderCount > 0 && (
+                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 px-1 text-[10px] font-semibold text-slate-600 dark:text-neutral-400">
+                      {approval.reminderCount}
+                    </span>
+                  )}
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Manual decision</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => onAction({ approval, kind: "approve" })}>
+                  {actionMenuLabel(approval.flow, "approve")}
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onSelect={() => onAction({ approval, kind: "reject" })}>
+                  {actionMenuLabel(approval.flow, "reject")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {approval.escalated && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                disabled={resolving}
+                onClick={() => onResolve(approval)}
+              >
+                {resolving ? <Spinner className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                Resolved
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Manual decision</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => onAction({ approval, kind: "approve" })}>
-                {actionMenuLabel(approval.flow, "approve")}
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onSelect={() => onAction({ approval, kind: "reject" })}>
-                {actionMenuLabel(approval.flow, "reject")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+          </div>
+        ) : approval.status === "failed" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            disabled={retrying}
+            onClick={() => onRetry(approval)}
+          >
+            {retrying ? <Spinner className="h-3.5 w-3.5" /> : <RotateCw className="h-3.5 w-3.5" />}
+            Retry
+          </Button>
         ) : (
           <span className="text-xs text-slate-300 dark:text-neutral-600">—</span>
         )}
@@ -243,7 +349,7 @@ function ApprovalRow({ approval, onAction }: { approval: Approval; onAction: (a:
 }
 
 export function Approvals() {
-  const [status, setStatus] = useState<ApprovalStatus | "all">("all");
+  const [filters, setFilters] = useState<ApprovalFilters>({ page: 1, pageSize: 25 });
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -252,16 +358,22 @@ export function Approvals() {
   const [cloneSuggestions, setCloneSuggestions] = useState<GwsUser[]>([]);
   const [cloneSuggestionsLoading, setCloneSuggestionsLoading] = useState(false);
   const [showCloneSuggestions, setShowCloneSuggestions] = useState(false);
+  const [comment, setComment] = useState("");
+  const [pendingResolve, setPendingResolve] = useState<Approval | null>(null);
+  const [resolveComment, setResolveComment] = useState("");
 
   const qc = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["approvals", status],
-    queryFn: () => getApprovals(status === "all" ? undefined : status),
+    queryKey: ["approvals", filters],
+    queryFn: () => getApprovals(filters),
   });
 
   const actionMutation = useMutation({
     mutationFn: ({ approval, kind }: PendingAction) => {
-      const body = approval.flow === "akamai_access" && kind === "approve" ? { cloneFromEmail: cloneFromEmail.trim() } : {};
+      const body = {
+        ...(approval.flow === "akamai_access" && kind === "approve" ? { cloneFromEmail: cloneFromEmail.trim() } : {}),
+        comment: comment.trim(),
+      };
       return kind === "approve" ? approveMailApproval(approval.issueKey, body) : rejectMailApproval(approval.issueKey, body);
     },
     onSuccess: (_data, vars) => {
@@ -273,11 +385,52 @@ export function Approvals() {
       });
       setPendingAction(null);
       setCloneFromEmail("");
+      setComment("");
     },
     onError: (_err, vars) => {
       toast.add({ title: "Action failed", description: `Couldn't ${vars.kind} ${vars.approval.issueKey}.` });
     },
   });
+
+  const retryMutation = useMutation({
+    mutationFn: (approval: Approval) => retryMailApproval(approval.issueKey),
+    onSuccess: (data, approval) => {
+      qc.invalidateQueries({ queryKey: ["approvals"] });
+      qc.invalidateQueries({ queryKey: ["kpis"] });
+      const sent = data.result.status === "setup_email_sent" || data.result.status === "transfer_email_sent";
+      toast.add({
+        title: sent ? "Resent" : "Retry failed again",
+        description: sent
+          ? `${approval.issueKey}'s decision email was resent successfully.`
+          : `${approval.issueKey} still couldn't be sent (${data.result.status}).`,
+      });
+    },
+    onError: (_err, approval) => {
+      toast.add({ title: "Retry failed", description: `Couldn't retry ${approval.issueKey}.` });
+    },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: (approval: Approval) => resolveMailApproval(approval.issueKey, resolveComment.trim()),
+    onSuccess: (_data, approval) => {
+      qc.invalidateQueries({ queryKey: ["approvals"] });
+      qc.invalidateQueries({ queryKey: ["kpis"] });
+      toast.add({ title: "Resolved", description: `${approval.issueKey} was marked resolved and closed.` });
+      setPendingResolve(null);
+      setResolveComment("");
+    },
+    onError: (_err, approval) => {
+      toast.add({ title: "Couldn't resolve", description: `Failed to mark ${approval.issueKey} resolved.` });
+    },
+  });
+
+  function closeResolveDialog(open: boolean) {
+    if (!open) {
+      setPendingResolve(null);
+      setResolveComment("");
+      resolveMutation.reset();
+    }
+  }
 
   // Live-as-you-type search for "Clone access from..." -- same account
   // autocomplete the manager's own Akamai setup form/email offers, so an
@@ -303,6 +456,7 @@ export function Approvals() {
       setPendingAction(null);
       setCloneFromEmail("");
       setCloneSuggestions([]);
+      setComment("");
       actionMutation.reset();
     }
   }
@@ -312,14 +466,19 @@ export function Approvals() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
-  const q = search.trim().toLowerCase();
-  const filtered = (data?.results ?? []).filter((a) =>
-    !q ||
-    a.issueKey.toLowerCase().includes(q) ||
-    (a.employeeEmail && a.employeeEmail.toLowerCase().includes(q)) ||
-    (a.managerEmail && a.managerEmail.toLowerCase().includes(q))
-  );
-  const rows = [...filtered].sort((a, b) => {
+  function applySearch() {
+    setFilters((f) => ({ ...f, q: search.trim() || undefined, page: 1 }));
+  }
+
+  // Type-and-narrow, same feel as every other search box in the dashboard --
+  // Enter/the Search button still apply instantly for anyone who prefers that.
+  useEffect(() => {
+    const timer = setTimeout(applySearch, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  const rows = [...(data?.results ?? [])].sort((a, b) => {
     const av = a[sortField] ?? "";
     const bv = b[sortField] ?? "";
     const cmp = typeof av === "number" && typeof bv === "number"
@@ -361,42 +520,45 @@ export function Approvals() {
           </div>
         </div>
 
-        {/* Status tabs + search */}
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2">
-            {STATUS_TABS.map((tab) => {
-              const button = (
-                <button
-                  key={tab.key}
-                  onClick={() => setStatus(tab.key)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                    status === tab.key
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-              if (tab.key === "all") return button;
-              return (
-                <Tooltip key={tab.key}>
-                  <TooltipTrigger render={button} />
-                  <TooltipContent>{STATUS_CONFIG[tab.key].description}</TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </div>
-          <div className="relative ml-auto w-64">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
+        {/* Filters */}
+        <div className="mt-5 flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-44">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
-              type="text"
-              placeholder="Search issue, employee, manager..."
-              className="h-9 pl-9 text-xs"
+              placeholder="Issue key, employee, or manager email..."
+              className="pl-8 h-9 text-xs"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applySearch()}
             />
           </div>
+          <SelectField
+            options={STATUS_TABS.map((tab) => ({ value: tab.key, label: tab.label }))}
+            placeholder="All statuses"
+            value={filters.status ?? "all"}
+            onValueChange={(v) => setFilters((f) => ({ ...f, status: v === "all" ? undefined : v, page: 1 }))}
+            className="w-44"
+          />
+          <DatePickerWithRange
+            value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
+            onChange={(range: DateRange | undefined) =>
+              setFilters((prev) => ({
+                ...prev,
+                from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+                to:   range?.to   ? format(range.to,   "yyyy-MM-dd") : undefined,
+                page: 1,
+              }))
+            }
+          />
+          <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-xs"
+            onClick={() => { setFilters({ page: 1, pageSize: 25 }); setSearch(""); }}
+          >
+            Clear
+          </Button>
         </div>
       </div>
 
@@ -441,12 +603,31 @@ export function Approvals() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
                     {rows.map((a) => (
-                      <ApprovalRow key={a.issueKey} approval={a} onAction={setPendingAction} />
+                      <ApprovalRow
+                        key={a.issueKey}
+                        approval={a}
+                        onAction={setPendingAction}
+                        onRetry={(approval) => retryMutation.mutate(approval)}
+                        retrying={retryMutation.isPending && retryMutation.variables?.issueKey === a.issueKey}
+                        onResolve={(approval) => setPendingResolve(approval)}
+                        resolving={resolveMutation.isPending && resolveMutation.variables?.issueKey === a.issueKey}
+                      />
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+          </div>
+        )}
+        {data && (
+          <div className="mt-4">
+            <Pagination
+              page={filters.page ?? 1}
+              pageSize={filters.pageSize ?? 25}
+              total={data.total}
+              onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
+              itemLabel="approvals"
+            />
           </div>
         )}
       </div>
@@ -497,6 +678,17 @@ export function Approvals() {
                     )}
                   </div>
                 )}
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-neutral-400">
+                    Comment
+                  </label>
+                  <Textarea
+                    placeholder="e.g. Confirmed with the manager directly"
+                    rows={3}
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                  />
+                </div>
                 {errorMessage && (
                   <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
                 )}
@@ -504,7 +696,7 @@ export function Approvals() {
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     variant={pendingAction.kind === "reject" ? "destructive" : "default"}
-                    disabled={actionMutation.isPending || (needsCloneInput && !cloneFromEmail.trim())}
+                    disabled={actionMutation.isPending || (needsCloneInput && !cloneFromEmail.trim()) || !comment.trim()}
                     onClick={(e) => {
                       e.preventDefault();
                       actionMutation.mutate(pendingAction);
@@ -516,6 +708,61 @@ export function Approvals() {
               </>
             );
           })()}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resolved -- for an escalated ticket IT handled manually outside the
+          automation. Requires a comment so the ticket carries real evidence
+          of what was actually done, same as Approve/Reject above. */}
+      <AlertDialog open={pendingResolve !== null} onOpenChange={closeResolveDialog}>
+        <AlertDialogContent>
+          {pendingResolve && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Mark resolved</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Closes {pendingResolve.issueKey} without running the clone-from-employee automation — use this
+                  when IT already handled the access request manually (e.g. directly in the GWS console).
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="mt-3">
+                <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-neutral-400">
+                  Comment
+                </label>
+                <Textarea
+                  autoFocus
+                  placeholder="e.g. Granted access directly in GWS console"
+                  rows={3}
+                  value={resolveComment}
+                  onChange={(e) => setResolveComment(e.target.value)}
+                />
+              </div>
+              {resolveMutation.isError && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  {(() => {
+                    const raw = (resolveMutation.error as Error).message;
+                    try {
+                      return JSON.parse(raw.slice(raw.indexOf(":") + 1).trim())?.detail ?? raw;
+                    } catch {
+                      return raw;
+                    }
+                  })()}
+                </p>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={resolveMutation.isPending || !resolveComment.trim()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    resolveMutation.mutate(pendingResolve);
+                  }}
+                >
+                  {resolveMutation.isPending ? "Working…" : "Confirm"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>

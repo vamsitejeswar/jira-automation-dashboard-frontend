@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, Outlet } from "react-router-dom";
-import { PageSpinner } from "@/components/ui/spinner";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { getMe } from "@/api";
 
 // Gates every route behind a real Google sign-in (see app/routers/auth.py) --
@@ -16,7 +16,12 @@ export function AuthGate() {
   if (me.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-neutral-950">
-        <PageSpinner />
+        <DotLottieReact
+          src="https://lottie.host/0ab55cf0-b1bf-4847-becb-5ee950a27f1e/aHA68VmTWM.json"
+          loop
+          autoplay
+          className="h-42 w-42"
+        />
       </div>
     );
   }

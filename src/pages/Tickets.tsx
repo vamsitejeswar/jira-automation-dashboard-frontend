@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Search, Download } from "lucide-react";
+import { Search, Download, RotateCw } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
@@ -16,11 +16,13 @@ import { SelectField } from "@/components/app/select-field";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { OutcomeBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
-import { getTickets } from "@/api";
+import { toast } from "@/components/ui/toast";
+import { getTickets, retryCredentialEmail } from "@/api";
 import type { TicketFilters } from "@/api";
 import type { TicketSummary } from "@/api";
 import { formatIST } from "@/lib/utils";
@@ -36,6 +38,7 @@ const FLOW_OPTIONS = [
   { value: "scheduled_credentials", label: "Scheduled Credentials" },
   { value: "data_transfer", label: "Data Transfer" },
   { value: "toggle_change", label: "Toggle Change" },
+  { value: "ad_m365_disable", label: "AD / M365 Disable" },
 ];
 
 function parseYMD(s: string | undefined): Date | undefined {
@@ -56,6 +59,48 @@ function isStuck(t: TicketSummary): boolean {
   if (!NON_TERMINAL_OUTCOMES.has(t.currentStatus)) return false;
   const hoursSince = (Date.now() - new Date(t.updatedAt).getTime()) / 3_600_000;
   return hoursSince >= STUCK_THRESHOLD_HOURS;
+}
+
+// Only a GWS mailbox ticket whose credential email failed to send can be
+// retried here -- the mailbox itself already exists (see
+// app/routers/admin_api.py's retry_credential_email), only the welcome
+// email needs resending.
+function RetryCredentialEmailCell({ ticket }: { ticket: TicketSummary }) {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => retryCredentialEmail(ticket.issueKey),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["kpis"] });
+      const sent = data.status === "succeeded";
+      toast.add({
+        title: sent ? "Resent" : "Retry failed again",
+        description: sent
+          ? `${ticket.issueKey}'s credentials email was resent successfully.`
+          : `${ticket.issueKey} still couldn't be sent (${data.status}).`,
+      });
+    },
+    onError: () => {
+      toast.add({ title: "Retry failed", description: `Couldn't retry ${ticket.issueKey}.` });
+    },
+  });
+
+  if (ticket.currentStatus !== "credential_email_failed") {
+    return <span className="text-xs text-slate-300 dark:text-neutral-600">—</span>;
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 gap-1.5 text-xs"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+    >
+      {mutation.isPending ? <Spinner className="h-3.5 w-3.5" /> : <RotateCw className="h-3.5 w-3.5" />}
+      Retry
+    </Button>
+  );
 }
 
 const col = createColumnHelper<TicketSummary>();
@@ -113,15 +158,27 @@ const columns = [
   }),
   col.accessor("employeeEmail", {
     header: "Employee",
-    cell: (info) => (
-      <span className="text-xs text-slate-600 dark:text-neutral-400">{info.getValue() ?? "—"}</span>
-    ),
+    cell: (info) => {
+      const email = info.getValue();
+      return email ? (
+        <Link to={`/employees?q=${encodeURIComponent(email)}`} className="text-xs text-blue-600 hover:underline">
+          {email}
+        </Link>
+      ) : (
+        <span className="text-xs text-slate-600 dark:text-neutral-400">—</span>
+      );
+    },
   }),
   col.accessor("updatedAt", {
     header: "Last Updated",
     cell: (info) => (
       <span className="tabular-nums text-xs text-slate-600 dark:text-neutral-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
     ),
+  }),
+  col.display({
+    id: "actions",
+    header: "Actions",
+    cell: (info) => <RetryCredentialEmailCell ticket={info.row.original} />,
   }),
 ];
 
@@ -256,7 +313,7 @@ export function Tickets() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-slate-50 dark:bg-neutral-950">
+              <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
                     {hg.headers.map((h) => (

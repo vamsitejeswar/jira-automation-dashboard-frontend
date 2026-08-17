@@ -9,6 +9,12 @@ export const FlowSchema = z.enum([
   "data_transfer",
   "toggle_change",
   "ad_m365_disable",
+  // Not a real automation, just scheduled_tasks.py's reminder job writing
+  // its own audit events (reminder_sent/reminder_failed/manager_no_response/
+  // automation_disabled) -- these show up in the same Cloud Logging stream
+  // as everything else, so anomalies/KPI breakdowns need to be able to
+  // parse them too.
+  "approval_reminder",
 ]);
 export type Flow = z.infer<typeof FlowSchema>;
 
@@ -113,11 +119,16 @@ export const ApprovalSchema = z.object({
   managerEmail: z.string().nullable(),
   reminderCount: z.number(),
   updatedAt: z.string().nullable(),
+  // Akamai only -- the manager wasn't sure what access to grant and handed
+  // the ticket to IT instead of deciding. Still "pending" (Approve/Reject
+  // still work), just distinguished so IT knows a Resolved shortcut exists.
+  escalated: z.boolean(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;
 
 export const ApprovalsResponseSchema = z.object({
   total: z.number(),
+  page: z.number(),
   results: z.array(ApprovalSchema),
 });
 export type ApprovalsResponse = z.infer<typeof ApprovalsResponseSchema>;
@@ -187,6 +198,12 @@ export const AnomalyEventSchema = z.object({
   issueKey: z.string().nullable(),
   reason: z.string().nullable(),
   error: z.string().nullable(),
+  employeeEmail: z.string().nullable().optional(),
+  managerEmail: z.string().nullable().optional(),
+  // Only populated for the current page (a batched Jira lookup, not part of
+  // the Cloud Logging scan itself) -- see GET /api/admin/anomalies.
+  title: z.string().nullable().optional(),
+  createdAt: z.string().nullable().optional(),
 });
 export type AnomalyEvent = z.infer<typeof AnomalyEventSchema>;
 
@@ -323,6 +340,8 @@ export const AutomationDetailSchema = z.object({
   successRate: z.number().nullable(),
   toggles: z.array(AutomationToggleSchema),
   recentEvents: z.array(AuditEventSchema),
+  recentEventsTotal: z.number(),
+  page: z.number(),
 });
 export type AutomationDetail = z.infer<typeof AutomationDetailSchema>;
 

@@ -17,6 +17,9 @@ import {
   EmployeeSearchSuggestionsSchema,
   ApprovalsResponseSchema,
   GwsUserSearchResponseSchema,
+  HrTicketSchema,
+  HrTicketsResponseSchema,
+  HrTicketUpdateResponseSchema,
   type TicketsResponse,
   type TicketDetail,
   type Kpis,
@@ -33,6 +36,10 @@ import {
   type EmployeeSearchSuggestions,
   type ApprovalsResponse,
   type GwsUserSearchResponse,
+  type HrTicket,
+  type HrTicketsResponse,
+  type HrTicketStatus,
+  type HrTicketUpdateResponse,
 } from "./types";
 
 // Real backend URL for a standalone-deployed frontend (no dev proxy to fall
@@ -276,6 +283,48 @@ export function getAutomationDetail(flow: string, days = 30, page = 1, pageSize 
 
 export function getIntegrationHealth(): Promise<Health> {
   return fetchJSON(HealthSchema, `/api/admin/health`);
+}
+
+// ── HR Dashboard ───────────────────────────────────────────────────────────────
+
+export interface HrTicketFilters {
+  type?: "onboarding" | "offboarding";
+  status?: HrTicketStatus;
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function getHrTicketDetail(issueKey: string): Promise<HrTicket> {
+  return fetchJSON(HrTicketSchema, `/api/hr/tickets/${encodeURIComponent(issueKey)}`);
+}
+
+export function getHrTickets(filters: HrTicketFilters = {}): Promise<HrTicketsResponse> {
+  const params = new URLSearchParams();
+  if (filters.type) params.set("type", filters.type);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  params.set("page", String(filters.page ?? 1));
+  params.set("page_size", String(filters.pageSize ?? 25));
+  return fetchJSON(HrTicketsResponseSchema, `/api/hr/tickets?${params}`);
+}
+
+export interface HrTicketUpdateBody {
+  employee_email?: string;
+  personal_email?: string;
+  joining_date?: string;
+  last_working_day?: string;
+}
+
+export function updateHrTicketFields(issueKey: string, body: HrTicketUpdateBody): Promise<HrTicketUpdateResponse> {
+  return fetchJSON(HrTicketUpdateResponseSchema, `/api/hr/tickets/${encodeURIComponent(issueKey)}/update`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────────

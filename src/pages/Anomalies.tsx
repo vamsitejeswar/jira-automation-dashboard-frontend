@@ -30,7 +30,12 @@ const FLOW_OPTIONS = [
   { value: "scheduled_credentials", label: "Scheduled Credentials" },
   { value: "data_transfer",         label: "Data Transfer" },
   { value: "toggle_change",         label: "Toggle Change" },
+  { value: "config_change",         label: "Config Change" },
   { value: "ad_m365_disable",       label: "AD / M365 Disable" },
+  { value: "isecure_access",        label: "iSecure Access" },
+  { value: "webhook",               label: "Automation Disabled" },
+  { value: "software_revoke",       label: "Software Revoke" },
+  { value: "hr_update",             label: "HR Update" },
 ];
 const SEVERITY_OPTIONS = [
   { value: "INFO",    label: "INFO" },

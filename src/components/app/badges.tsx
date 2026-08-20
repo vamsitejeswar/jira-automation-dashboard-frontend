@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { titleCase } from "@/lib/utils";
+import type { HrTicketStatus } from "@/api";
 
 // Flat tint chips -- background + text only, no border/ring -- reads as a
 // current, quiet status indicator instead of the heavier outlined-pill
@@ -45,6 +46,19 @@ const OUTCOME_MAP: Record<string, StatusKey> = {
   credential_email_failed: "error",
   ad_disable_failed: "error",
   m365_disable_failed: "error",
+  isecure_onboarded: "success",
+  isecure_offboarded: "success",
+  isecure_onboard_failed: "error",
+  isecure_offboard_failed: "error",
+  isecure_onboard_disabled: "orange",
+  isecure_offboard_disabled: "orange",
+  // A per-application software-revoke callback still in flight -- routine,
+  // not a problem (see app/routers/software_revoke_webhook.py).
+  in_progress: "warning",
+  // The parent ticket's own category didn't clearly say onboarding vs.
+  // offboarding -- deliberately not guessed (see
+  // app/services/isecure_onboarding.py), needs a human to look at it.
+  ambiguous_direction: "error",
   akamai_disabled: "orange",
   gws_creation_disabled: "orange",
   data_transfer_disabled: "orange",
@@ -111,16 +125,69 @@ const FLOW_CONFIG: Record<string, { label: string; style: StatusKey }> = {
   scheduled_credentials: { label: "Credentials", style: "success" },
   data_transfer: { label: "Data Transfer", style: "orange" },
   toggle_change: { label: "Toggle Change", style: "muted" },
+  config_change: { label: "Config Change", style: "muted" },
   // "error" was wrong here -- that's a status/severity color, and this is
   // just the flow category, so a fully successful disable was showing up
   // red regardless of outcome. The Status badge already carries the real
   // success/failure signal.
   ad_m365_disable: { label: "AD / M365 Disable", style: "muted" },
   approval_reminder: { label: "Approval Reminder", style: "muted" },
+  isecure_access: { label: "iSecure Access", style: "purple" },
+  // Written once per incoming webhook while the master Automation toggle is
+  // off -- not a real flow, just a "nothing ran" marker.
+  webhook: { label: "Automation Disabled", style: "orange" },
+  // Per-application revoke status called back by an external server, not
+  // this automation itself (see app/routers/software_revoke_webhook.py).
+  software_revoke: { label: "Software Revoke", style: "info" },
+  // HR filled in a missing employee_email/joining_date via their own
+  // dashboard (see app/routers/hr_api.py) -- not this automation acting on
+  // its own.
+  hr_update: { label: "HR Update", style: "purple" },
 };
 
 export function FlowBadge({ flow }: { flow: string }) {
   const cfg = FLOW_CONFIG[flow] ?? { label: flow, style: "muted" as const };
+  return (
+    <Badge variant="ghost" className={STATUS_STYLE[cfg.style]}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
+// ── HR Dashboard ─────────────────────────────────────────────────────────────
+// A different, smaller vocabulary than OutcomeBadge's OUTCOME_MAP (which is
+// keyed on raw automation outcome strings) -- HrTicketStatus is a dashboard-
+// computed digest specifically for HR's own queue, so it gets its own
+// component rather than polluting OUTCOME_MAP with entries that only apply
+// to HR tickets.
+const HR_STATUS_CONFIG: Record<HrTicketStatus, { label: string; style: StatusKey }> = {
+  // Distinct amber "warning" -- an expected, actionable state HR needs to
+  // act on, not a failure (that's why it's not "error").
+  waiting_for_hr_update: { label: "Waiting for HR Update", style: "warning" },
+  in_progress: { label: "In Progress", style: "info" },
+  completed: { label: "Completed", style: "success" },
+  failed: { label: "Failed", style: "error" },
+};
+
+export function HrTicketStatusBadge({ status }: { status: HrTicketStatus }) {
+  const cfg = HR_STATUS_CONFIG[status];
+  return (
+    <Badge variant="ghost" className={STATUS_STYLE[cfg.style]}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
+// Same color pairing as FLOW_CONFIG's gws_mailbox/gws_suspend entries above,
+// so onboarding/offboarding reads consistently whether it's shown here or on
+// the admin Tickets page.
+const HR_TYPE_CONFIG: Record<"onboarding" | "offboarding", { label: string; style: StatusKey }> = {
+  onboarding: { label: "Onboarding", style: "info" },
+  offboarding: { label: "Offboarding", style: "orange" },
+};
+
+export function HrTicketTypeBadge({ type }: { type: "onboarding" | "offboarding" }) {
+  const cfg = HR_TYPE_CONFIG[type];
   return (
     <Badge variant="ghost" className={STATUS_STYLE[cfg.style]}>
       {cfg.label}

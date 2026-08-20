@@ -26,7 +26,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { getEmployeeProgress } from "@/api";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionPanel } from "@/components/ui/accordion";
+import { StageTimeline } from "@/components/app/StageTimeline";
+import { getEmployeeProgress, getTicketDetail } from "@/api";
 import type { EmployeeProgress, FlowStep, EmployeeSearchResult } from "@/api";
 import { formatIST, titleCase } from "@/lib/utils";
 import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
@@ -59,6 +61,7 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
   ad_m365_disable:       { label: "AD / M365 Disable",         icon: UserX,       color: "#b91c1c" },
   toggle_change:         { label: "Toggle Change",             icon: ToggleLeft, color: "#64748b" },
   manual_task:           { label: "Manual Task",               icon: ClipboardList, color: "#64748b" },
+  software_revoke:       { label: "Software Access Revoke",   icon: ShieldCheck, color: "#0891b2" },
 };
 
 const STATUS_CONFIG = {
@@ -68,6 +71,36 @@ const STATUS_CONFIG = {
   pending:     { label: "Pending",     bg: "#f8fafc", color: "#475569", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8" },
 };
 
+// Lazily fetches the one ticket's stage timeline the first time its
+// accordion panel opens -- AccordionPanel unmounts its children when closed
+// (no keepMounted), so this component simply not existing until then IS the
+// lazy trigger. Shares the ["ticket", issueKey] query cache/staleTime with
+// TicketDetail.tsx's own query for the same ticket, so visiting one and then
+// expanding the other doesn't double-fetch.
+function StepStageTimeline({ issueKey }: { issueKey: string }) {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["ticket", issueKey],
+    queryFn: () => getTicketDetail(issueKey),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-3 text-sm text-slate-500 dark:text-neutral-400">
+        <Spinner className="h-4 w-4" /> Loading stages…
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="flex items-center justify-between gap-2 py-3 text-sm text-red-600 dark:text-red-400">
+        Failed to load stages.
+        <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+      </div>
+    );
+  }
+  return <StageTimeline stages={data?.stages ?? []} className="pt-2" />;
+}
+
 function StepRow({ step }: { step: FlowStep }) {
   const cfg = STEP_CONFIG[step.status];
   const flow = FLOW_META[step.flow];
@@ -76,15 +109,8 @@ function StepRow({ step }: { step: FlowStep }) {
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
 
-  return (
-    <div
-      style={{
-        background: dark ? cfg.darkBg : cfg.bg,
-        border: `1px solid ${dark ? cfg.darkBorder : cfg.border}`,
-        borderLeft: `3px solid ${dark ? cfg.darkColor : cfg.color}`,
-      }}
-      className="rounded-lg p-3.5 flex items-start gap-3"
-    >
+  const rowBody = (
+    <>
       <div
         className="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0"
         style={{ background: flow?.color + "18" }}
@@ -118,6 +144,7 @@ function StepRow({ step }: { step: FlowStep }) {
           {step.issueKey && (
             <Link
               to={`/tickets/${step.issueKey}`}
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-0.5 text-xs font-mono font-bold text-blue-600 hover:underline"
             >
               {step.issueKey}
@@ -126,7 +153,43 @@ function StepRow({ step }: { step: FlowStep }) {
           )}
         </div>
       </div>
-    </div>
+    </>
+  );
+
+  const style = {
+    background: dark ? cfg.darkBg : cfg.bg,
+    border: `1px solid ${dark ? cfg.darkBorder : cfg.border}`,
+    borderLeft: `3px solid ${dark ? cfg.darkColor : cfg.color}`,
+  };
+
+  // No real ticket behind this step at all (the flow simply hasn't started
+  // yet, so there isn't even an issueKey) -- nothing to expand. A manual_task
+  // step (e.g. "Admin Support", "Laptop Handover") DOES have a real ticket
+  // and IS expandable -- GET /tickets/{issueKey} returns a real ticket with a
+  // placeholder "Awaiting update" stage for these, not a 404, since the
+  // ticket itself exists even though this automation never logs anything
+  // for it.
+  if (!step.issueKey) {
+    return (
+      <div style={style} className="rounded-lg p-3.5 flex items-start gap-3">
+        {rowBody}
+      </div>
+    );
+  }
+
+  return (
+    <Accordion className="rounded-lg overflow-hidden" style={style}>
+      <AccordionItem value="stages" className="border-b-0">
+        <AccordionTrigger className="p-3.5 items-start gap-3 w-full text-left">
+          {rowBody}
+        </AccordionTrigger>
+        <AccordionPanel className="px-3.5 pb-3.5">
+          <div className="rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 p-4 ml-[2.75rem]">
+            <StepStageTimeline issueKey={step.issueKey} />
+          </div>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
   );
 }
 

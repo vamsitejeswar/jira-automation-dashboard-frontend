@@ -15,6 +15,25 @@ export const FlowSchema = z.enum([
   // as everything else, so anomalies/KPI breakdowns need to be able to
   // parse them too.
   "approval_reminder",
+  // "Admin Support" subtask -> iSecure/Aero physical access-control (door
+  // cards) onboarding/offboarding. Fires on both onboarding and offboarding
+  // parent tickets under the same flow name.
+  "isecure_access",
+  // Settings > Config edits (jira_project_key, it_mail, admin_mail, ...) --
+  // distinct from toggle_change, which is for on/off toggles specifically.
+  "config_change",
+  // Written once per incoming webhook while the master "Automation" toggle
+  // is off -- jira_webhook.py's handle_onboarding_webhook, before any
+  // per-flow dispatch happens.
+  "webhook",
+  // Offboarding "Software Access Revoke" subtask -- per-application revoke
+  // status reported by an external server via POST
+  // /internal/software-revoke-status, not by this automation itself.
+  "software_revoke",
+  // HR filled in a missing employee_email/joining_date via their own
+  // dashboard (see app/routers/hr_api.py) -- not this automation acting on
+  // its own.
+  "hr_update",
 ]);
 export type Flow = z.infer<typeof FlowSchema>;
 
@@ -44,11 +63,18 @@ export const TicketSummarySchema = z.object({
   // -- looked up live from Jira, so null if that lookup failed or the
   // ticket no longer exists.
   title: z.string().nullable().optional(),
-  flow: FlowSchema,
-  currentStatus: z.string(),
+  // Null for a real ticket this automation has never logged anything for at
+  // all (e.g. "Admin Support"/"Asset Pickup" subtasks, or any ticket before
+  // its first event ever lands) -- there's genuinely no flow/status to
+  // report yet, distinct from a tracked ticket that's merely early in its
+  // own flow.
+  flow: FlowSchema.nullable(),
+  currentStatus: z.string().nullable(),
   employeeEmail: z.string().nullable(),
   managerEmail: z.string().nullable(),
-  updatedAt: z.string(),
+  // Same "no automation history at all" case as flow/currentStatus above --
+  // null, not a fabricated timestamp.
+  updatedAt: z.string().nullable(),
   hasError: z.boolean(),
 });
 export type TicketSummary = z.infer<typeof TicketSummarySchema>;
@@ -58,6 +84,26 @@ export const CommentSchema = z.object({
   body: z.string(),
   createdAt: z.string(),
 });
+
+// One row in a ticket's own simplified Created -> ... -> Closed lifecycle
+// timeline (see StageTimeline) -- distinct from AuditEvent (every raw logged
+// event): this is the human-readable digest shown next to the Audit
+// Timeline, and inside the Employee Search accordion. Most tickets have
+// exactly 3 stages; an offboarding "Software Access Revoke" ticket has one
+// middle stage per application (application is only set on those rows).
+export const StageStatusSchema = z.enum(["done", "in_progress", "pending", "skipped", "failed"]);
+export type StageStatus = z.infer<typeof StageStatusSchema>;
+
+export const StageSchema = z.object({
+  label: z.string(),
+  status: StageStatusSchema,
+  timestamp: z.string().nullable(),
+  flow: z.string().nullable().optional(),
+  outcome: z.string().nullable().optional(),
+  application: z.string().nullable().optional(),
+  issueKey: z.string().nullable().optional(),
+});
+export type Stage = z.infer<typeof StageSchema>;
 
 export const TicketDetailSchema = TicketSummarySchema.extend({
   jiraUrl: z.string(),
@@ -69,6 +115,7 @@ export const TicketDetailSchema = TicketSummarySchema.extend({
   jiraStatus: z.string().nullable().optional(),
   createdAt: z.string().nullable().optional(),
   employeeName: z.string().nullable().optional(),
+  stages: z.array(StageSchema).optional(),
 });
 export type TicketDetail = z.infer<typeof TicketDetailSchema>;
 
@@ -153,6 +200,8 @@ export const ToggleNameSchema = z.enum([
   "data_transfer_enabled",
   "ad_disable_enabled",
   "m365_disable_enabled",
+  "isecure_onboard_enabled",
+  "isecure_offboard_enabled",
 ]);
 export type ToggleName = z.infer<typeof ToggleNameSchema>;
 
@@ -174,6 +223,9 @@ export const ConfigNameSchema = z.enum([
   "it_mail",
   "admin_mail",
   "drive_common_mail",
+  "isecure_company",
+  "isecure_default_access_group_ids",
+  "hr_allowed_emails",
 ]);
 export type ConfigName = z.infer<typeof ConfigNameSchema>;
 
@@ -361,5 +413,69 @@ export const MeSchema = z.object({
   email: z.string(),
   name: z.string().nullable(),
   picture: z.string().nullable(),
+  // Absent on a token issued before this claim existed -- the backend's own
+  // GET /api/auth/me already falls back to "admin" in that case, so this
+  // always resolves to a real role by the time it reaches us.
+  role: z.enum(["admin", "hr"]),
 });
 export type Me = z.infer<typeof MeSchema>;
+
+// ── HR Dashboard ───────────────────────────────────────────────────────────────
+// "waiting_for_hr_update" is a real, distinct backend status (see
+// app/store.py's mark_waiting_for_hr_update) -- not derived client-side.
+export const HrTicketStatusSchema = z.enum(["waiting_for_hr_update", "in_progress", "completed", "failed"]);
+export type HrTicketStatus = z.infer<typeof HrTicketStatusSchema>;
+
+// Everything else Jira has on the parent ticket, beyond the four fields HR
+// can edit -- HR has no Jira account, so this is the only place they see it.
+export const HrParentDetailsSchema = z.object({
+  title: z.string().nullable(),
+  status: z.string().nullable(),
+  priority: z.string().nullable(),
+  assignee: z.string().nullable(),
+  reporter: z.string().nullable(),
+  projectKey: z.string().nullable(),
+  projectName: z.string().nullable(),
+  createdAt: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+});
+export type HrParentDetails = z.infer<typeof HrParentDetailsSchema>;
+
+export const HrTicketSchema = z.object({
+  issueKey: z.string(),
+  parentKey: z.string().nullable(),
+  parentDetails: HrParentDetailsSchema,
+  title: z.string().nullable(),
+  type: z.enum(["onboarding", "offboarding"]),
+  status: HrTicketStatusSchema,
+  employeeEmail: z.string().nullable(),
+  personalEmail: z.string().nullable(),
+  joiningDate: z.string().nullable(),
+  lastWorkingDay: z.string().nullable(),
+  managerEmail: z.string().nullable(),
+  missingFields: z.array(z.enum(["employee_email", "personal_email", "joining_date", "last_working_day"])),
+  updatedAt: z.string().nullable(),
+  // Only populated by the single-ticket detail fetch (getHrTicketDetail),
+  // not the list -- same split as admin's own get_ticket_detail/get_tickets.
+  stages: z.array(StageSchema).optional(),
+});
+export type HrTicket = z.infer<typeof HrTicketSchema>;
+
+export const HrTicketsResponseSchema = z.object({
+  total: z.number(),
+  page: z.number(),
+  results: z.array(HrTicketSchema),
+});
+export type HrTicketsResponse = z.infer<typeof HrTicketsResponseSchema>;
+
+export const HrTicketUpdateResponseSchema = z.object({
+  issueKey: z.string(),
+  updated: z.object({
+    employee_email: z.string().optional(),
+    personal_email: z.string().optional(),
+    joining_date: z.string().optional(),
+    last_working_day: z.string().optional(),
+  }),
+  retriedSubtasks: z.array(z.string()),
+});
+export type HrTicketUpdateResponse = z.infer<typeof HrTicketUpdateResponseSchema>;

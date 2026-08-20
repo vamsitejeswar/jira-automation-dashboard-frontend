@@ -38,7 +38,12 @@ const FLOW_OPTIONS = [
   { value: "scheduled_credentials", label: "Scheduled Credentials" },
   { value: "data_transfer", label: "Data Transfer" },
   { value: "toggle_change", label: "Toggle Change" },
+  { value: "config_change", label: "Config Change" },
   { value: "ad_m365_disable", label: "AD / M365 Disable" },
+  { value: "isecure_access", label: "iSecure Access" },
+  { value: "webhook", label: "Automation Disabled" },
+  { value: "software_revoke", label: "Software Revoke" },
+  { value: "hr_update", label: "HR Update" },
 ];
 
 function parseYMD(s: string | undefined): Date | undefined {
@@ -56,7 +61,7 @@ const NON_TERMINAL_OUTCOMES = new Set([
   "setup_email_sent", "transfer_email_sent", "deferred_to_lwd", "deferred_to_doj",
 ]);
 function isStuck(t: TicketSummary): boolean {
-  if (!NON_TERMINAL_OUTCOMES.has(t.currentStatus)) return false;
+  if (!t.currentStatus || !t.updatedAt || !NON_TERMINAL_OUTCOMES.has(t.currentStatus)) return false;
   const hoursSince = (Date.now() - new Date(t.updatedAt).getTime()) / 3_600_000;
   return hoursSince >= STUCK_THRESHOLD_HOURS;
 }
@@ -140,14 +145,17 @@ const columns = [
   }),
   col.accessor("flow", {
     header: "Flow",
-    cell: (info) => <FlowBadge flow={info.getValue()} />,
+    cell: (info) => {
+      const flow = info.getValue();
+      return flow ? <FlowBadge flow={flow} /> : <Badge variant="ghost">—</Badge>;
+    },
   }),
   col.accessor("currentStatus", {
     header: "Status",
     cell: (info) => (
       <div className="flex items-center gap-1.5">
-        <OutcomeBadge outcome={info.getValue()} />
-        {info.row.original.hasError && !isSelfEvidentError(info.getValue()) && (
+        {info.getValue() ? <OutcomeBadge outcome={info.getValue()!} /> : <Badge variant="ghost">Not tracked</Badge>}
+        {info.row.original.hasError && info.getValue() && !isSelfEvidentError(info.getValue()!) && (
           <Badge variant="destructive">Error</Badge>
         )}
         {isStuck(info.row.original) && (

@@ -1,12 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, Lock,
+  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, Lock, UserX,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
+import { StageTimeline } from "@/components/app/StageTimeline";
 import { getTicketDetail, getAnomalies } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { AuditEvent } from "@/api";
@@ -19,6 +20,8 @@ const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
   scheduled_credentials: { icon: Key,         color: "#16a34a" },
   data_transfer:         { icon: Database,    color: "#ea580c" },
   toggle_change:         { icon: ToggleLeft,  color: "#64748b" },
+  ad_m365_disable:       { icon: UserX,       color: "#b91c1c" },
+  software_revoke:       { icon: ShieldCheck, color: "#0891b2" },
 };
 
 const SEVERITY_ROW: Record<string, string> = {
@@ -180,6 +183,10 @@ export function TicketDetail() {
   });
 
   const t = ticket.data ?? null;
+  // t.flow is null for a real ticket this automation never logged anything
+  // for (see StageSchema comment) -- fall back to the same generic look
+  // FLOW_META[unknownKey] already produces via its own ?? chains.
+  const flowMeta = t?.flow ? FLOW_META[t.flow] : undefined;
   const anomalyKeys = new Set(
     (anomalies.data?.anomalies ?? [])
       .filter((a) => a.issueKey === issueKey)
@@ -212,16 +219,16 @@ export function TicketDetail() {
       <div className="px-4 py-4 space-y-4">
       {/* Header card */}
       <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
-        <div className="h-1.5" style={{ background: FLOW_META[t!.flow]?.color ?? "#64748b" }} />
+        <div className="h-1.5" style={{ background: flowMeta?.color ?? "#64748b" }} />
         <div className="p-6 flex items-start justify-between gap-6">
           <div className="flex items-start gap-4">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0"
-              style={{ background: (FLOW_META[t!.flow]?.color ?? "#64748b") + "18" }}
+              style={{ background: (flowMeta?.color ?? "#64748b") + "18" }}
             >
               {(() => {
-                const FlowIcon = FLOW_META[t!.flow]?.icon ?? ToggleLeft;
-                return <FlowIcon className="h-5 w-5" style={{ color: FLOW_META[t!.flow]?.color ?? "#64748b" }} />;
+                const FlowIcon = flowMeta?.icon ?? ToggleLeft;
+                return <FlowIcon className="h-5 w-5" style={{ color: flowMeta?.color ?? "#64748b" }} />;
               })()}
             </div>
             <div className="space-y-2">
@@ -236,9 +243,13 @@ export function TicketDetail() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <FlowBadge flow={t!.flow} />
-                <OutcomeBadge outcome={t!.currentStatus} />
-                {t!.hasError && !isSelfEvidentError(t!.currentStatus) && (
+                {t!.flow && <FlowBadge flow={t!.flow} />}
+                {t!.currentStatus ? (
+                  <OutcomeBadge outcome={t!.currentStatus} />
+                ) : (
+                  <Badge variant="ghost">Not tracked by automation</Badge>
+                )}
+                {t!.hasError && t!.currentStatus && !isSelfEvidentError(t!.currentStatus) && (
                   <Badge variant="destructive">Has Error</Badge>
                 )}
               </div>
@@ -274,6 +285,13 @@ export function TicketDetail() {
             Open in Jira <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
+      </div>
+
+      {/* Stage timeline -- simplified Created -> ... -> Closed digest, read
+          at a glance before the full raw audit log below. */}
+      <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden p-6">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300 mb-4">Stage timeline</h2>
+        <StageTimeline stages={t!.stages ?? []} />
       </div>
 
       {/* Timeline */}

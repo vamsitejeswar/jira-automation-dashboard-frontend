@@ -23,20 +23,20 @@ export function exportToExcel<T extends Record<string, unknown>>(
 
 export function ticketsToExcelRows(tickets: {
   issueKey: string;
-  flow: string;
-  currentStatus: string;
+  flow: string | null;
+  currentStatus: string | null;
   employeeEmail: string | null;
   managerEmail: string | null;
-  updatedAt: string;
+  updatedAt: string | null;
   hasError: boolean;
 }[]) {
   return tickets.map((t) => ({
     "Issue Key": t.issueKey,
-    Flow: t.flow,
-    Status: t.currentStatus,
+    Flow: t.flow ?? "",
+    Status: t.currentStatus ?? "",
     "Employee Email": t.employeeEmail ?? "",
     "Manager Email": t.managerEmail ?? "",
-    "Last Updated (IST)": t.updatedAt,
+    "Last Updated (IST)": t.updatedAt ?? "",
     "Has Error": t.hasError ? "Yes" : "No",
   }));
 }

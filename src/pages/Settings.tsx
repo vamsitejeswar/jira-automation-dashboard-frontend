@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Zap, RefreshCw, SunMoon, Hash, LifeBuoy, BellRing } from "lucide-react";
+import { AlertTriangle, Zap, RefreshCw, SunMoon, Hash, LifeBuoy, BellRing, DoorClosed, UserCog } from "lucide-react";
 import {
   GoogleIcon, GoogleDriveIcon, GmailIcon, Microsoft365Icon,
   ActiveDirectoryIcon, AkamaiIcon, AutomationIcon,
@@ -17,7 +17,7 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTab, TabsIndicator, TabsPanel } from "@/components/ui/tabs";
-import { getToggles, updateToggle, getConfig, updateConfig } from "@/api";
+import { getToggles, updateToggle, getConfig, updateConfig, getAuditLog } from "@/api";
 import { formatIST } from "@/lib/utils";
 import type { Toggle, ToggleName, ConfigValue, ConfigName } from "@/api";
 
@@ -31,6 +31,8 @@ const TOGGLE_LABELS: Record<ToggleName, string> = {
   data_transfer_enabled:        "Data Transfer",
   ad_disable_enabled:           "Active Directory Disable",
   m365_disable_enabled:         "M365 Disable",
+  isecure_onboard_enabled:      "iSecure Onboard",
+  isecure_offboard_enabled:     "iSecure Offboard",
 };
 
 const DESCRIPTIONS: Record<ToggleName, string> = {
@@ -52,6 +54,10 @@ const DESCRIPTIONS: Record<ToggleName, string> = {
     "Disabling a departing employee's on-premise Active Directory account.",
   m365_disable_enabled:
     "Disabling a departing employee's Microsoft 365/Entra ID account and emailing their manager.",
+  isecure_onboard_enabled:
+    "Adding a new employee to the iSecure/Aero physical access-control system (door cards) on the \"Admin Support\" subtask.",
+  isecure_offboard_enabled:
+    "Deactivating a departing employee's iSecure/Aero physical access-control cards on the \"Admin Support\" subtask.",
 };
 
 const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
@@ -64,6 +70,8 @@ const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
   data_transfer_enabled:        GoogleDriveIcon,
   ad_disable_enabled:           ActiveDirectoryIcon,
   m365_disable_enabled:         Microsoft365Icon,
+  isecure_onboard_enabled:      DoorClosed,
+  isecure_offboard_enabled:     DoorClosed,
 };
 
 // Real fixed-color logos/icons -- recoloring them via the row's accent would
@@ -83,6 +91,8 @@ const TOGGLE_ACCENT: Record<ToggleName, string> = {
   data_transfer_enabled:        "#ea580c",
   ad_disable_enabled:           "#b91c1c",
   m365_disable_enabled:         "#4338ca",
+  isecure_onboard_enabled:      "#059669",
+  isecure_offboard_enabled:     "#b91c1c",
 };
 
 const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
@@ -94,7 +104,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
   {
     title:    "Onboarding",
     subtitle: "Controls for new employee onboarding flows",
-    names:    ["gws_account_creation_enabled", "retry_on_update_enabled"],
+    names:    ["gws_account_creation_enabled", "retry_on_update_enabled", "isecure_onboard_enabled"],
   },
   {
     title:    "Access Approvals",
@@ -104,7 +114,10 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
   {
     title:    "Offboarding",
     subtitle: "Controls for departing employee offboarding flows",
-    names:    ["gws_account_suspend_enabled", "data_transfer_enabled", "ad_disable_enabled", "m365_disable_enabled"],
+    names:    [
+      "gws_account_suspend_enabled", "data_transfer_enabled",
+      "ad_disable_enabled", "m365_disable_enabled", "isecure_offboard_enabled",
+    ],
   },
 ];
 
@@ -112,17 +125,23 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
 // icon as the Data Transfer toggle since it's literally that flow's fallback
 // address.
 const CONFIG_ICONS: Record<ConfigName, React.ElementType> = {
-  jira_project_key:  Hash,
-  it_mail:           LifeBuoy,
-  admin_mail:        BellRing,
-  drive_common_mail: GoogleDriveIcon,
+  jira_project_key:                 Hash,
+  it_mail:                          LifeBuoy,
+  admin_mail:                       BellRing,
+  drive_common_mail:                GoogleDriveIcon,
+  isecure_company:                  DoorClosed,
+  isecure_default_access_group_ids: DoorClosed,
+  hr_allowed_emails:                UserCog,
 };
 
 const CONFIG_ACCENT: Record<ConfigName, string> = {
-  jira_project_key:  "#2563eb",
-  it_mail:           "#0891b2",
-  admin_mail:        "#dc2626",
-  drive_common_mail: "#ea580c",
+  jira_project_key:                 "#2563eb",
+  it_mail:                          "#0891b2",
+  admin_mail:                       "#dc2626",
+  drive_common_mail:                "#ea580c",
+  isecure_company:                  "#059669",
+  isecure_default_access_group_ids: "#059669",
+  hr_allowed_emails:                "#7c3aed",
 };
 
 function ToggleRow({
@@ -279,6 +298,143 @@ function ConfigRow({
   );
 }
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function parseEmailList(value: string): string[] {
+  return value.split("\n").map((e) => e.trim()).filter(Boolean);
+}
+
+// One config value (hr_allowed_emails) is genuinely a list of people, not a
+// single string -- a single "Manage" button opens a real add/remove UI
+// instead of ConfigRow's plain single-line Input, matching how a list of
+// named people should actually be edited.
+function HrAllowedEmailsManager({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: ConfigValue;
+  onSave: (name: string, value: string) => void;
+  isPending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [emails, setEmails] = useState<string[]>(() => parseEmailList(config.value));
+  const [newEmail, setNewEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const Icon = CONFIG_ICONS[config.name] ?? Hash;
+  const accent = CONFIG_ACCENT[config.name] ?? "#2563eb";
+  const currentCount = parseEmailList(config.value).length;
+
+  function resetToSaved() {
+    setEmails(parseEmailList(config.value));
+    setNewEmail("");
+    setError(null);
+  }
+
+  function addEmail() {
+    const candidate = newEmail.trim().toLowerCase();
+    if (!candidate) return;
+    if (!EMAIL_RE.test(candidate)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    if (emails.includes(candidate)) {
+      setError("Already added");
+      return;
+    }
+    setEmails((prev) => [...prev, candidate]);
+    setNewEmail("");
+    setError(null);
+  }
+
+  function removeEmail(email: string) {
+    setEmails((prev) => prev.filter((e) => e !== email));
+  }
+
+  function handleSave() {
+    onSave(config.name, emails.join("\n"));
+    setOpen(false);
+  }
+
+  return (
+    <div className="flex items-start gap-4 px-5 py-4">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
+        <Icon className="h-5 w-5" style={{ color: accent }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{config.label}</p>
+        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-neutral-400">{config.description}</p>
+        <p className="mt-1.5 text-xs text-slate-400 dark:text-neutral-500">
+          {currentCount === 0 ? "No one allowed yet" : `${currentCount} ${currentCount === 1 ? "person" : "people"} allowed`}
+        </p>
+        <AlertDialog
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (next) resetToSaved();
+          }}
+        >
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="outline" className="mt-2 h-8 text-xs">
+              Manage
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Manage {config.label}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Add or remove who can sign in to the HR Dashboard.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="mt-3 flex items-center gap-2">
+              <Input
+                value={newEmail}
+                onChange={(e) => {
+                  setNewEmail(e.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addEmail())}
+                placeholder="name@company.com"
+                className="h-8 text-xs"
+              />
+              <Button size="sm" variant="outline" className="h-8 text-xs flex-shrink-0" onClick={addEmail}>
+                Add
+              </Button>
+            </div>
+            {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+
+            <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border divide-y divide-slate-100 dark:divide-neutral-800 dark:border-neutral-800">
+              {emails.length === 0 ? (
+                <p className="px-3 py-3 text-xs text-slate-400 dark:text-neutral-500">No one added yet.</p>
+              ) : (
+                emails.map((email) => (
+                  <div key={email} className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span className="text-xs text-slate-700 dark:text-neutral-300 truncate">{email}</span>
+                    <button
+                      onClick={() => removeEmail(email)}
+                      className="text-xs text-slate-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400 flex-shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSave} disabled={isPending}>
+                Save
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
 function GeneralSkeleton() {
   return (
     <div className="space-y-4">
@@ -302,6 +458,52 @@ function GeneralSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function humanizeConfigName(name: string): string {
+  return name.split("_").map((w) => w[0]?.toUpperCase() + w.slice(1)).join(" ");
+}
+
+// Config edits have no issueKey, so they're kept out of the Failures &
+// History event feed (see _SETTINGS_CHANGE_FLOWS in admin_api.py) -- this is
+// their own home instead, right next to the fields they changed.
+function ConfigHistory() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["config-history"],
+    queryFn:  () => getAuditLog({ flow: "config_change", pageSize: 8 }),
+  });
+
+  const events = data?.results ?? [];
+  if (isLoading || events.length === 0) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+      <div className="px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Recent changes</h2>
+        <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">Last {events.length} config edits</p>
+      </div>
+      <div className="divide-y divide-slate-100 dark:divide-neutral-800">
+        {events.map((e, i) => {
+          const configName = typeof e.config === "string" ? e.config : "";
+          const oldValue = e.oldValue == null || e.oldValue === "" ? "(empty)" : String(e.oldValue);
+          const newValue = e.newValue == null || e.newValue === "" ? "(empty)" : String(e.newValue);
+          return (
+            <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
+              <span className="w-36 flex-shrink-0 font-semibold text-slate-700 dark:text-neutral-300">
+                {humanizeConfigName(configName)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-neutral-400">
+                {oldValue} &rarr; {newValue}
+              </span>
+              <span className="flex-shrink-0 whitespace-nowrap text-slate-400 dark:text-neutral-500">
+                {e.changedBy ? `${e.changedBy} · ` : ""}{formatIST(e.timestamp)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -421,24 +623,36 @@ function ConfigTab() {
   if (isError) return <ErrorState error={error as Error} />;
 
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
-      <div className="px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Config</h2>
-        <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">
-          Changes take effect immediately.
-        </p>
+    <>
+      <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+        <div className="px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Config</h2>
+          <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">
+            Changes take effect immediately.
+          </p>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-neutral-800">
+          {(data?.config ?? []).map((config) =>
+            config.name === "hr_allowed_emails" ? (
+              <HrAllowedEmailsManager
+                key={config.name}
+                config={config}
+                onSave={(name, value) => mutation.mutate({ name, value })}
+                isPending={mutation.isPending}
+              />
+            ) : (
+              <ConfigRow
+                key={config.name}
+                config={config}
+                onSave={(name, value) => mutation.mutate({ name, value })}
+                isPending={mutation.isPending}
+              />
+            )
+          )}
+        </div>
       </div>
-      <div className="divide-y divide-slate-100 dark:divide-neutral-800">
-        {(data?.config ?? []).map((config) => (
-          <ConfigRow
-            key={config.name}
-            config={config}
-            onSave={(name, value) => mutation.mutate({ name, value })}
-            isPending={mutation.isPending}
-          />
-        ))}
-      </div>
-    </div>
+      <ConfigHistory />
+    </>
   );
 }
 

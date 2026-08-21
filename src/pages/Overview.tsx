@@ -21,7 +21,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/app/preset-picker";
 import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob, getIntegrationHealth } from "@/api";
 import type { EmployeeSearchResult, IntegrationStatus, Health } from "@/api";
-import { formatISTShort, describeCron } from "@/lib/utils";
+import { formatISTShort, describeCron, titleCase } from "@/lib/utils";
 import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
 import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
 
@@ -248,7 +248,7 @@ export function Overview() {
       qc.invalidateQueries({ queryKey: ["scheduled-jobs"] });
       toast.add({ title: "Job triggered", description: `"${res.job.label}" is running now.` });
     },
-    onError: () => toast.add({ title: "Force run failed", description: "Couldn't trigger that job. Try again." }),
+    onError: () => toast.add({ title: "Run failed", description: "Couldn't trigger that job. Try again." }),
   });
 
   // "Needs your attention" -- named, linked items instead of a bare count,
@@ -327,11 +327,7 @@ export function Overview() {
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header — always visible */}
       <div className="border-b bg-white px-8 py-6 dark:bg-neutral-900">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-neutral-100">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Jira onboarding and offboarding automation monitor</p>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <GlobalSearchBox />
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={setPreset} />
           <DatePickerWithRange
@@ -547,7 +543,7 @@ export function Overview() {
                     <li key={i} className="flex items-center gap-2.5 px-5 py-3 hover:bg-slate-50 transition-colors dark:hover:bg-neutral-800/50">
                       <SeverityBadge severity={a.severity} />
                       <FlowBadge flow={a.flow} />
-                      <span className="flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{a.outcome}</span>
+                      <span className="flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{titleCase(a.outcome)}</span>
                       {a.issueKey && (
                         <Link
                           to={`/tickets/${a.issueKey}`}
@@ -617,10 +613,10 @@ export function Overview() {
                         className="h-8 gap-1.5 text-xs font-medium shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-200"
                         disabled={forceRun.isPending}
                         onClick={() => forceRun.mutate(job.name)}
-                        title="Force run now, without waiting for the schedule"
+                        title="Run now, without waiting for the schedule"
                       >
                         {isRunningThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                        Force run
+                        Run Now
                       </Button>
                     </li>
                     );

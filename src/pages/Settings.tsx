@@ -682,14 +682,6 @@ function AppearanceTab() {
 export function Settings() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
-      {/* Page header */}
-      <div className="border-b bg-white px-8 py-6 dark:bg-neutral-900">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-neutral-100">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-          Automation features, contact addresses, and how the dashboard looks.
-        </p>
-      </div>
-
       <div className="px-4 py-4 max-w-3xl">
         <Tabs defaultValue="general">
           <TabsList className="mb-4">

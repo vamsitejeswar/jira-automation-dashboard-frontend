@@ -510,17 +510,8 @@ export function Approvals() {
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
       <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Approvals</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-              Akamai access and Drive Transfer requests resolved through manager decision emails.
-            </p>
-          </div>
-        </div>
-
         {/* Filters */}
-        <div className="mt-5 flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <div className="relative flex-1 min-w-44">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
@@ -552,7 +543,7 @@ export function Approvals() {
           <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             className="h-8 text-xs"
             onClick={() => { setFilters({ page: 1, pageSize: 25 }); setSearch(""); }}
           >

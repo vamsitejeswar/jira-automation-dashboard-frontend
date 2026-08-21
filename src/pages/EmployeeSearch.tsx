@@ -401,24 +401,15 @@ export function EmployeeSearch() {
     <TooltipProvider delay={200}>
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Employee Search</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-              Track onboarding and offboarding automation progress for any employee.
-            </p>
-          </div>
-        </div>
-
+      <div className="border-b bg-white dark:bg-neutral-900 px-6 py-6">
         {/* Search */}
-        <div className="mt-5 flex gap-3 max-w-2xl">
+        <div className="flex gap-2 max-w-2xl">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               type="text"
               placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
-              className="w-full h-11 pl-10 pr-10 text-sm"
+              className="w-full h-9 pl-8 pr-8 text-xs"
               value={inputVal}
               onChange={e => { setInputVal(e.target.value); setShowSuggestions(true); }}
               onFocus={() => setShowSuggestions(true)}
@@ -430,9 +421,7 @@ export function EmployeeSearch() {
               }}
             />
             {suggestionsLoading && (
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                <Spinner className="h-4 w-4" />
-              </div>
+              <Spinner className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
             )}
 
             {showSuggestions && suggestions.length > 0 && (
@@ -463,7 +452,7 @@ export function EmployeeSearch() {
               </ul>
             )}
           </div>
-          <Button onClick={() => submit(inputVal)} className="h-11 px-6">
+          <Button size="sm" onClick={() => submit(inputVal)} className="h-9 text-xs">
             Search
           </Button>
         </div>

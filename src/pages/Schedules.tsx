@@ -43,7 +43,7 @@ export function Schedules() {
       qc.invalidateQueries({ queryKey: ["scheduled-job-log"] });
       toast.add({ title: "Job triggered", description: `"${res.job.label}" is running now.` });
     },
-    onError: () => toast.add({ title: "Force run failed", description: "Couldn't trigger that job. Try again." }),
+    onError: () => toast.add({ title: "Run failed", description: "Couldn't trigger that job. Try again." }),
   });
 
   function selectJob(name: string) {
@@ -58,20 +58,15 @@ export function Schedules() {
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header */}
       <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Schedules</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-          View scheduled jobs and their per-ticket run history.
-        </p>
-
         {/* Job picker */}
         {jobs.isLoading ? (
-          <Skeleton className="mt-5 h-9 w-full max-w-md rounded-lg" />
+          <Skeleton className="h-9 w-full max-w-md rounded-lg" />
         ) : jobs.isError ? (
-          <div className="mt-5 rounded-xl border p-4"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
+          <div className="rounded-xl border p-4"><ErrorState error={jobs.error as Error} onRetry={jobs.refetch} /></div>
         ) : jobs.data!.jobs.length === 0 ? (
-          <div className="mt-5 rounded-xl border overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
+          <div className="rounded-xl border overflow-hidden"><EmptyState message="No scheduled jobs configured" /></div>
         ) : (
-          <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SelectField
               options={jobs.data!.jobs.map((j) => ({ value: j.name, label: j.label }))}
               placeholder="Select a job..."
@@ -91,7 +86,7 @@ export function Schedules() {
               ) : (
                 <Play className="h-3.5 w-3.5" />
               )}
-              Force run
+              Run Now
             </Button>
           </div>
         )}

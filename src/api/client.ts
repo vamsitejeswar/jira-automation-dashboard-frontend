@@ -48,6 +48,16 @@ import {
 // deployment both want.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
+// Shown to the user via ErrorState -- the raw status/body (often literal
+// JSON) is still logged to the console for debugging, but never surfaced
+// directly, same reasoning as Login.tsx's own ERROR_MESSAGES map.
+function friendlyErrorMessage(status: number): string {
+  if (status === 401 || status === 403) return "You've been signed out. Please sign in again.";
+  if (status === 404) return "We couldn't find that.";
+  if (status >= 500) return "Something went wrong on our end. Please try again in a moment.";
+  return "We couldn't complete that request. Please try again.";
+}
+
 async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const res = await fetch(url, {
@@ -61,8 +71,9 @@ async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestIn
     credentials: "include",
   });
   if (!res.ok) {
-    const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status}: ${msg}`);
+    const detail = await res.text().catch(() => res.statusText);
+    console.error(`API request failed: ${res.status} ${path}`, detail);
+    throw new Error(friendlyErrorMessage(res.status));
   }
   const json = await res.json();
   return schema.parse(json);
@@ -256,6 +267,11 @@ export function searchGwsUsers(query: string): Promise<GwsUserSearchResponse> {
   return fetchJSON(GwsUserSearchResponseSchema, `/api/admin/gws/search-users?${params}`);
 }
 
+export function searchHrManagers(query: string): Promise<GwsUserSearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  return fetchJSON(GwsUserSearchResponseSchema, `/api/hr/manager-search?${params}`);
+}
+
 export interface AuditLogFilters {
   flow?: string;
   severity?: string;
@@ -318,6 +334,7 @@ export interface HrTicketUpdateBody {
   personal_email?: string;
   joining_date?: string;
   last_working_day?: string;
+  manager_email?: string;
 }
 
 export function updateHrTicketFields(issueKey: string, body: HrTicketUpdateBody): Promise<HrTicketUpdateResponse> {

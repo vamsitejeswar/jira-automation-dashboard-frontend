@@ -247,29 +247,8 @@ export function Anomalies() {
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
       <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">Failures &amp; History</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-              All automation events. Use filters to focus on failures.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {days === 30 && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
-                <Info className="h-3.5 w-3.5 flex-shrink-0" />
-                Cloud Logging retention is 30 days.
-              </div>
-            )}
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="gap-2">
-              <Download className="h-3.5 w-3.5" />
-              Export Excel
-            </Button>
-          </div>
-        </div>
-
         {/* Filter bar */}
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
 
           <DatePickerWithRange
@@ -295,10 +274,16 @@ export function Anomalies() {
             className="w-36"
           />
 
-          <label className="ml-auto flex items-center gap-2 cursor-pointer">
-            <Switch checked={includeNormal} onCheckedChange={updateIncludeNormal} />
-            <span className="text-xs text-slate-600 dark:text-neutral-400 font-medium">Include normal events</span>
-          </label>
+          {days === 30 && (
+            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
+              <Info className="h-3.5 w-3.5 flex-shrink-0" />
+              Cloud Logging retention is 30 days.
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="gap-2">
+            <Download className="h-3.5 w-3.5" />
+            Export Excel
+          </Button>
         </div>
       </div>
 
@@ -431,9 +416,13 @@ export function Anomalies() {
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">
                   {includeNormal ? "All events" : "Failure events"}
                 </h2>
-                <span className="ml-auto text-xs text-slate-400 dark:text-neutral-500 font-medium">
+                <span className="text-xs text-slate-400 dark:text-neutral-500 font-medium">
                   {data!.total} total
                 </span>
+                <label className="ml-auto flex items-center gap-2 cursor-pointer">
+                  <Switch checked={includeNormal} onCheckedChange={updateIncludeNormal} />
+                  <span className="text-xs text-slate-600 dark:text-neutral-400 font-medium">Include normal events</span>
+                </label>
               </div>
               {events.length === 0 ? (
                 <EmptyState

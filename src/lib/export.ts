@@ -41,6 +41,33 @@ export function ticketsToExcelRows(tickets: {
   }));
 }
 
+export function hrTicketsToExcelRows(tickets: {
+  issueKey: string;
+  parentKey: string | null;
+  type: "onboarding" | "offboarding";
+  status: string;
+  title: string | null;
+  employeeEmail: string | null;
+  personalEmail: string | null;
+  joiningDate: string | null;
+  lastWorkingDay: string | null;
+  managerEmail: string | null;
+  updatedAt: string | null;
+}[]) {
+  return tickets.map((t) => ({
+    "Request ID": t.parentKey ?? t.issueKey,
+    Type: t.type === "onboarding" ? "Onboarding" : "Offboarding",
+    Status: t.status,
+    Title: t.title ?? "",
+    "Employee Email": t.employeeEmail ?? "",
+    "Personal Email": t.personalEmail ?? "",
+    "Date of Joining": t.joiningDate ?? "",
+    "Last Working Day": t.lastWorkingDay ?? "",
+    "Reporting Manager": t.managerEmail ?? "",
+    "Last Updated (IST)": t.updatedAt ?? "",
+  }));
+}
+
 export function auditLogToExcelRows(events: {
   timestamp: string;
   severity: string;

@@ -36,6 +36,7 @@ const FLOW_OPTIONS = [
   { value: "webhook",               label: "Automation Disabled" },
   { value: "software_revoke",       label: "Software Revoke" },
   { value: "hr_update",             label: "HR Update" },
+  { value: "offboarding_sla",       label: "Offboarding SLA Breach" },
 ];
 const SEVERITY_OPTIONS = [
   { value: "INFO",    label: "INFO" },

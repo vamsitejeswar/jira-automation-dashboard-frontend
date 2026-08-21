@@ -143,6 +143,11 @@ const FLOW_CONFIG: Record<string, { label: string; style: StatusKey }> = {
   // dashboard (see app/routers/hr_api.py) -- not this automation acting on
   // its own.
   hr_update: { label: "HR Update", style: "purple" },
+  // A dedicated "error" red -- unlike every other flow badge here (which is
+  // just a neutral category label), this one IS itself the problem: a
+  // high-priority offboarding subtask still open past its 6pm-on-LWD
+  // deadline (see app/services/offboarding_sla.py).
+  offboarding_sla: { label: "Offboarding SLA Breach", style: "error" },
 };
 
 export function FlowBadge({ flow }: { flow: string }) {

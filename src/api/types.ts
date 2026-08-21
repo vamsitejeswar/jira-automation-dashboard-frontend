@@ -34,6 +34,10 @@ export const FlowSchema = z.enum([
   // dashboard (see app/routers/hr_api.py) -- not this automation acting on
   // its own.
   "hr_update",
+  // Daily SLA-breach scan (see app/services/offboarding_sla.py) -- an
+  // offboarding subtask (any type except Asset Pickup) still open past 6pm
+  // on the employee's Last Working Day.
+  "offboarding_sla",
 ]);
 export type Flow = z.infer<typeof FlowSchema>;
 

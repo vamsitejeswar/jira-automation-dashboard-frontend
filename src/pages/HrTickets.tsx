@@ -480,9 +480,6 @@ export function HrTickets() {
     <div className="flex h-full flex-col bg-slate-50 dark:bg-neutral-950">
       <div className="border-b bg-white dark:bg-neutral-900 px-4 py-6 sm:px-8">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tracking-tight">My Tickets</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
-          Onboarding and offboarding tickets that need your attention.
-        </p>
 
         <div className="mt-5 flex flex-wrap gap-2 items-center">
           <div className="relative flex-1 min-w-44">

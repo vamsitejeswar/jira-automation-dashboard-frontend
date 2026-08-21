@@ -108,10 +108,13 @@ function buildTimeline(
     .map((a) => ({ kind: "audit" as const, ...a }));
 
   const items: TimelineItem[] = [...commentItems, ...orphanAuditItems];
+  // Newest first -- the most recent action (what someone opening this ticket
+  // actually wants to see first) shows immediately, not after scrolling past
+  // the full history.
   return items.sort((a, b) => {
     const ta = a.kind === "comment" ? a.createdAt : a.event.timestamp;
     const tb = b.kind === "comment" ? b.createdAt : b.event.timestamp;
-    return new Date(ta).getTime() - new Date(tb).getTime();
+    return new Date(tb).getTime() - new Date(ta).getTime();
   });
 }
 

@@ -44,6 +44,7 @@ const FLOW_OPTIONS = [
   { value: "webhook", label: "Automation Disabled" },
   { value: "software_revoke", label: "Software Revoke" },
   { value: "hr_update", label: "HR Update" },
+  { value: "offboarding_sla", label: "Offboarding SLA Breach" },
 ];
 
 function parseYMD(s: string | undefined): Date | undefined {

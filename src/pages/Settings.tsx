@@ -136,6 +136,7 @@ const CONFIG_ICONS: Record<ConfigName, React.ElementType> = {
   admin_mail:                       BellRing,
   drive_common_mail:                GoogleDriveIcon,
   isecure_company:                  DoorClosed,
+  isecure_location:                 DoorClosed,
   isecure_default_access_group_ids: DoorClosed,
   hr_allowed_emails:                UserCog,
 };
@@ -146,6 +147,7 @@ const CONFIG_ACCENT: Record<ConfigName, string> = {
   admin_mail:                       "#dc2626",
   drive_common_mail:                "#ea580c",
   isecure_company:                  "#059669",
+  isecure_location:                 "#059669",
   isecure_default_access_group_ids: "#059669",
   hr_allowed_emails:                "#7c3aed",
 };

@@ -229,6 +229,7 @@ export const ConfigNameSchema = z.enum([
   "admin_mail",
   "drive_common_mail",
   "isecure_company",
+  "isecure_location",
   "isecure_default_access_group_ids",
   "hr_allowed_emails",
 ]);

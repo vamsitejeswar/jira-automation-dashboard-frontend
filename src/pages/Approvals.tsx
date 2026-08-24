@@ -535,23 +535,6 @@ export function Approvals() {
       <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative flex-1 min-w-44">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
-            <Input
-              placeholder="Issue key, employee, or manager email..."
-              className="pl-8 h-9 text-xs"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && applySearch()}
-            />
-          </div>
-          <SelectField
-            options={STATUS_TABS.map((tab) => ({ value: tab.key, label: tab.label }))}
-            placeholder="All statuses"
-            value={filters.status ?? "all"}
-            onValueChange={(v) => setFilters((f) => ({ ...f, status: v === "all" ? undefined : v, page: 1 }))}
-            className="w-44"
-          />
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
           <DatePickerWithRange
             value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
@@ -575,7 +558,27 @@ export function Approvals() {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 space-y-4">
+        {/* Table controls */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-44">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
+            <Input
+              placeholder="Issue key, employee, or manager email..."
+              className="pl-8 h-8 text-xs"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applySearch()}
+            />
+          </div>
+          <SelectField
+            options={STATUS_TABS.map((tab) => ({ value: tab.key, label: tab.label }))}
+            placeholder="All statuses"
+            value={filters.status ?? "all"}
+            onValueChange={(v) => setFilters((f) => ({ ...f, status: v === "all" ? undefined : v, page: 1 }))}
+            className="w-44"
+          />
+        </div>
         {isLoading ? (
           <ApprovalsSkeleton />
         ) : isError ? (

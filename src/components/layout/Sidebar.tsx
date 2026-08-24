@@ -33,7 +33,7 @@ const NAV_GROUPS: { title: string | null; items: { to: string; icon: React.Eleme
       { to: "/anomalies", icon: AlertTriangle, label: "Failures & History" },
     ],
   },
-  { title: null, items: [{ to: "/settings", icon: Settings, label: "Settings" }] },
+  { title: "Settings", items: [{ to: "/settings", icon: Settings, label: "Settings" }] },
 ];
 
 // One props-configurable inner layout, rendered twice by the exported

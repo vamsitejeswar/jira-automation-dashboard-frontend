@@ -118,8 +118,10 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
   // For Failures, "up" is bad (red); for everything else "up" is good (green).
   const trendColor = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col dark:bg-neutral-900">
-      <div className="h-1" style={{ background: accent }} />
+    <div
+      className="rounded-xl border border-t-4 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col dark:bg-neutral-900"
+      style={{ borderTopColor: accent }}
+    >
       <div className="p-5 flex-1">
         <div className="flex items-start justify-between">
           <div>

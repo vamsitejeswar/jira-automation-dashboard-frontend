@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/app/select-field";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { PresetPicker } from "@/components/app/preset-picker";
+import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -194,8 +196,29 @@ const columns = [
 const SEARCH_DEBOUNCE_MS = 400;
 
 export function Tickets() {
-  const [filters, setFilters] = useState<TicketFilters>({ page: 1, pageSize: 25 });
+  const [preset, setPreset] = useState<DatePreset>("7d");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState(() => new Date().toISOString().split("T")[0]);
+  const [filters, setFilters] = useState<TicketFilters>(() => {
+    const dates = getPresetDates("7d");
+    return { page: 1, pageSize: 25, from: dates.from, to: dates.to };
+  });
   const [search, setSearch] = useState("");
+
+  function updatePreset(p: DatePreset) {
+    setPreset(p);
+    const dates = p === "custom" ? { from: customFrom, to: customTo } : getPresetDates(p);
+    setFilters((f) => ({ ...f, from: dates.from || undefined, to: dates.to || undefined, page: 1 }));
+  }
+
+  function updateCustomRangeFromPicker(range: DateRange | undefined) {
+    const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
+    const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
+    setCustomFrom(from);
+    setCustomTo(to);
+    setPreset("custom");
+    setFilters((f) => ({ ...f, from: from || undefined, to: to || undefined, page: 1 }));
+  }
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["tickets", filters],
@@ -252,23 +275,22 @@ export function Tickets() {
             onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
             className="w-44"
           />
+          <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
           <DatePickerWithRange
             value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
-            onChange={(range: DateRange | undefined) =>
-              setFilters((prev) => ({
-                ...prev,
-                from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
-                to:   range?.to   ? format(range.to,   "yyyy-MM-dd") : undefined,
-                page: 1,
-              }))
-            }
+            onChange={updateCustomRangeFromPicker}
           />
           <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
           <Button
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            onClick={() => { setFilters({ page: 1, pageSize: 25 }); setSearch(""); }}
+            onClick={() => {
+              const dates = getPresetDates("7d");
+              setPreset("7d");
+              setFilters({ page: 1, pageSize: 25, from: dates.from, to: dates.to });
+              setSearch("");
+            }}
           >
             Clear
           </Button>

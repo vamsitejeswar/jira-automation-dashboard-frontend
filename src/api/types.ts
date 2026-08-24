@@ -206,6 +206,7 @@ export const ToggleNameSchema = z.enum([
   "m365_disable_enabled",
   "isecure_onboard_enabled",
   "isecure_offboard_enabled",
+  "software_revoke_enabled",
 ]);
 export type ToggleName = z.infer<typeof ToggleNameSchema>;
 

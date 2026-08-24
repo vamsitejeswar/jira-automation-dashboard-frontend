@@ -274,16 +274,18 @@ export function Anomalies() {
             className="w-36"
           />
 
-          {days === 30 && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
-              <Info className="h-3.5 w-3.5 flex-shrink-0" />
-              Cloud Logging retention is 30 days.
-            </div>
-          )}
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="gap-2">
-            <Download className="h-3.5 w-3.5" />
-            Export Excel
-          </Button>
+          <div className="flex items-center gap-2 ml-auto">
+            {days === 30 && (
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2">
+                <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                Cloud Logging retention is 30 days.
+              </div>
+            )}
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="gap-2">
+              <Download className="h-3.5 w-3.5" />
+              Export Excel
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -216,7 +216,13 @@ function HrTicketEditForm({ ticket, onDone }: { ticket: HrTicket; onDone: () => 
                   setErrors((prev) => ({ ...prev, employeeEmail: "" }));
                 }}
                 placeholder="name@company.com"
+                disabled={!!ticket.employeeEmail}
               />
+              {ticket.employeeEmail && (
+                <p className="text-xs text-slate-400 dark:text-neutral-500">
+                  Already set and in use by the automation -- contact IT to change it.
+                </p>
+              )}
               <FieldError errors={errors.employeeEmail ? [{ message: errors.employeeEmail }] : undefined} />
             </FieldContent>
           </Field>
@@ -357,7 +363,7 @@ function FieldFact({ label, value, missing }: { label: string; value: string; mi
       </p>
       <p
         className={cn(
-          "mt-1 truncate text-sm",
+          "mt-1 break-all text-sm",
           missing ? "font-medium text-amber-600 dark:text-amber-400" : "text-slate-800 dark:text-neutral-200"
         )}
       >
@@ -476,7 +482,7 @@ function HrTicketDetailPanel({ issueKey, onBack }: { issueKey: string; onBack: (
                     </Button>
                   </CardAction>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {isOnboarding ? (
                     <>
                       <FieldFact
@@ -605,6 +611,7 @@ function HrTicketListItem({
           </span>
           <HrTicketTypeBadge type={ticket.type} />
           <HrTicketStatusBadge status={ticket.status} />
+          {ticket.status === "waiting_for_hr_update" && <Badge variant="destructive">Action Required</Badge>}
         </div>
         <p className="mt-0.5 text-[15px] font-semibold text-slate-900 dark:text-neutral-100 truncate">
           {ticket.title ?? "Untitled request"}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Zap, RefreshCw, SunMoon, Hash, LifeBuoy, BellRing, DoorClosed, UserCog } from "lucide-react";
+import { AlertTriangle, Zap, RefreshCw, SunMoon, Hash, LifeBuoy, BellRing, DoorClosed, UserCog, Webhook } from "lucide-react";
 import {
   GoogleIcon, GoogleDriveIcon, GmailIcon, Microsoft365Icon,
   ActiveDirectoryIcon, AkamaiIcon, AutomationIcon,
@@ -33,6 +33,7 @@ const TOGGLE_LABELS: Record<ToggleName, string> = {
   m365_disable_enabled:         "M365 Disable",
   isecure_onboard_enabled:      "iSecure Onboard",
   isecure_offboard_enabled:     "iSecure Offboard",
+  software_revoke_enabled:      "Software Access Revoke Webhook",
 };
 
 const DESCRIPTIONS: Record<ToggleName, string> = {
@@ -58,6 +59,8 @@ const DESCRIPTIONS: Record<ToggleName, string> = {
     "Adding a new employee to the iSecure/Aero physical access-control system (door cards) on the \"Admin Support\" subtask.",
   isecure_offboard_enabled:
     "Deactivating a departing employee's iSecure/Aero physical access-control cards on the \"Admin Support\" subtask.",
+  software_revoke_enabled:
+    "Recording status updates from external systems for the Software Access Revoke subtask.",
 };
 
 const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
@@ -72,6 +75,7 @@ const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
   m365_disable_enabled:         Microsoft365Icon,
   isecure_onboard_enabled:      DoorClosed,
   isecure_offboard_enabled:     DoorClosed,
+  software_revoke_enabled:      Webhook,
 };
 
 // Real fixed-color logos/icons -- recoloring them via the row's accent would
@@ -93,6 +97,7 @@ const TOGGLE_ACCENT: Record<ToggleName, string> = {
   m365_disable_enabled:         "#4338ca",
   isecure_onboard_enabled:      "#059669",
   isecure_offboard_enabled:     "#b91c1c",
+  software_revoke_enabled:      "#475569",
 };
 
 const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
@@ -117,6 +122,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    [
       "gws_account_suspend_enabled", "data_transfer_enabled",
       "ad_disable_enabled", "m365_disable_enabled", "isecure_offboard_enabled",
+      "software_revoke_enabled",
     ],
   },
 ];

@@ -57,7 +57,7 @@ export function Schedules() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center">
         {/* Job picker */}
         {jobs.isLoading ? (
           <Skeleton className="h-9 w-full max-w-md rounded-lg" />
@@ -94,7 +94,7 @@ export function Schedules() {
 
       <div className="px-4 py-4 space-y-4">
         {/* Run log */}
-        <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+        <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
           <div className="px-5 py-4 border-b flex items-start justify-between gap-4">
             <div>
               <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">
@@ -152,7 +152,7 @@ export function Schedules() {
                             <HoverCard>
                               <HoverCardTrigger
                                 render={
-                                  <Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 hover:underline" />
+                                  <Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline" />
                                 }
                               >
                                 {e.issueKey}

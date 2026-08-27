@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MailCheck, CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal, RotateCw, LifeBuoy,
+  CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal, RotateCw, LifeBuoy,
 } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -110,32 +110,6 @@ function StatusBadge({ status }: { status: ApprovalStatus }) {
       </TooltipTrigger>
       <TooltipContent>{cfg.description}</TooltipContent>
     </Tooltip>
-  );
-}
-
-function ApprovalsSkeleton() {
-  return (
-    <div>
-      <div className="rounded-xl bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 space-y-1.5">
-          <Skeleton className="h-4 w-44" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-        <div className="space-y-3.5 px-5 pb-5">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <Skeleton className="h-3 w-[8%]" />
-              <Skeleton className="h-5 w-[10%] rounded-full" />
-              <Skeleton className="h-5 w-[12%] rounded-full" />
-              <Skeleton className="h-3 w-[24%]" />
-              <Skeleton className="h-3 w-[24%]" />
-              <Skeleton className="h-3 w-[14%]" />
-              <Skeleton className="h-6 w-[10%] rounded-md" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -249,7 +223,7 @@ function ApprovalRow({
       <td className="px-5 py-3 whitespace-nowrap">
         <Link
           to={`/tickets/${approval.issueKey}`}
-          className="font-mono text-xs font-bold text-blue-600 hover:underline"
+          className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
         >
           {approval.issueKey}
         </Link>
@@ -280,7 +254,7 @@ function ApprovalRow({
         {approval.employeeEmail ? (
           <Link
             to={`/employees?q=${encodeURIComponent(approval.employeeEmail)}`}
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             {approval.employeeEmail}
           </Link>
@@ -532,19 +506,19 @@ export function Approvals() {
     <TooltipProvider delay={200}>
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center">
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
           <DatePickerWithRange
             value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
             onChange={updateCustomRangeFromPicker}
+            className="h-9"
           />
-          <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-xs"
+            className="h-9 text-xs"
             onClick={() => {
               const dates = getPresetDates("7d");
               setPreset("7d");
@@ -565,7 +539,7 @@ export function Approvals() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               placeholder="Issue key, employee, or manager email..."
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-9 text-xs"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applySearch()}
@@ -576,21 +550,31 @@ export function Approvals() {
             placeholder="All statuses"
             value={filters.status ?? "all"}
             onValueChange={(v) => setFilters((f) => ({ ...f, status: v === "all" ? undefined : v, page: 1 }))}
-            className="w-44"
+            className="w-44 !h-9"
           />
         </div>
-        {isLoading ? (
-          <ApprovalsSkeleton />
-        ) : isError ? (
-          <ErrorState error={error as Error} onRetry={refetch} />
-        ) : (
-          <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
-            <div className="px-5 py-4 flex items-center gap-2">
-              <MailCheck className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Mail Approval tickets</h2>
-              <span className="ml-auto text-xs text-slate-400 dark:text-neutral-500 font-medium">{data!.total} total</span>
+        <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
+          {isLoading ? (
+            <div className="space-y-3.5 px-4 py-3">
+              <div className="flex items-center gap-4">
+                {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
+                  <Skeleton key={i} className={`h-3 ${w}`} />
+                ))}
+              </div>
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              ))}
             </div>
-            {rows.length === 0 ? (
+          ) : isError ? (
+            <ErrorState error={error as Error} onRetry={refetch} />
+          ) : rows.length === 0 ? (
               <EmptyState message="No approvals to show for this filter" />
             ) : (
               <div className="overflow-x-auto">
@@ -632,8 +616,7 @@ export function Approvals() {
                 </table>
               </div>
             )}
-          </div>
-        )}
+        </div>
         {data && (
           <div className="mt-4">
             <Pagination

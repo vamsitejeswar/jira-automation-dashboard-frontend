@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Zap, RefreshCw, SunMoon, Hash, LifeBuoy, BellRing, DoorClosed, UserCog, Webhook } from "lucide-react";
+import { AlertTriangle, Zap, RefreshCw, Hash, LifeBuoy, BellRing, DoorClosed, UserCog, Webhook } from "lucide-react";
 import {
   GoogleIcon, GoogleDriveIcon, GmailIcon, Microsoft365Icon,
   ActiveDirectoryIcon, AkamaiIcon, AutomationIcon,
 } from "@/components/app/brand-icons";
-import { ThemeToggle } from "@/components/app/theme-toggle";
+import { useTheme, type Theme } from "@/providers/theme-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTab, TabsIndicator, TabsPanel } from "@/components/ui/tabs";
 import { getToggles, updateToggle, getConfig, updateConfig, getAuditLog } from "@/api";
-import { formatIST } from "@/lib/utils";
+import { formatIST, cn } from "@/lib/utils";
 import type { Toggle, ToggleName, ConfigValue, ConfigName } from "@/api";
 
 const TOGGLE_LABELS: Record<ToggleName, string> = {
@@ -38,29 +38,29 @@ const TOGGLE_LABELS: Record<ToggleName, string> = {
 
 const DESCRIPTIONS: Record<ToggleName, string> = {
   automation_enabled:
-    "Master switch for the entire automation: new tickets, scheduled emails, and Drive transfers.",
+    "Controls all onboarding and offboarding activities handled automatically.",
   email_sending_enabled:
-    "All outgoing emails: welcome emails, login credentials, and approval requests.",
+    "Allows the system to send required onboarding, offboarding, and approval emails.",
   gws_account_creation_enabled:
-    "Creating new Google Workspace accounts for onboarding tickets.",
+    "Automatically creates Google Workspace accounts for new employees.",
   retry_on_update_enabled:
-    "Automatically retrying a failed onboarding ticket when it is updated.",
+    "Automatically retries processing when an onboarding request is updated after a failure.",
   akamai_enabled:
-    "Akamai / ZScaler access approval emails. Independent of mailbox creation.",
+    "Sends access approval requests for Akamai and ZScaler access.",
   gws_account_suspend_enabled:
-    "Suspending a departing employee's Google Workspace account.",
+    "Automatically suspends Google Workspace accounts for departing employees.",
   data_transfer_enabled:
-    "Transferring a departing employee's Drive files to their manager.",
+    "Transfers a departing employee's Google Drive files to their manager.",
   ad_disable_enabled:
-    "Disabling a departing employee's on-premise Active Directory account.",
+    "Automatically disables Active Directory access for departing employees.",
   m365_disable_enabled:
-    "Disabling a departing employee's Microsoft 365/Entra ID account and emailing their manager.",
+    "Automatically disables Microsoft 365 access for departing employees and notifies their manager.",
   isecure_onboard_enabled:
-    "Adding a new employee to the iSecure/Aero physical access-control system (door cards) on the \"Admin Support\" subtask.",
+    "Automatically provides physical access for new employees.",
   isecure_offboard_enabled:
-    "Deactivating a departing employee's iSecure/Aero physical access-control cards on the \"Admin Support\" subtask.",
+    "Automatically removes physical access for departing employees.",
   software_revoke_enabled:
-    "Recording status updates from external systems for the Software Access Revoke subtask.",
+    "Automatically completes the software access removal process when access has been revoked.",
 };
 
 const TOGGLE_ICONS: Record<ToggleName, React.ElementType> = {
@@ -109,12 +109,7 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
   {
     title:    "Onboarding",
     subtitle: "Controls for new employee onboarding flows",
-    names:    ["gws_account_creation_enabled", "retry_on_update_enabled", "isecure_onboard_enabled"],
-  },
-  {
-    title:    "Access Approvals",
-    subtitle: "Third-party access provisioning flows",
-    names:    ["akamai_enabled"],
+    names:    ["gws_account_creation_enabled", "retry_on_update_enabled", "akamai_enabled", "isecure_onboard_enabled"],
   },
   {
     title:    "Offboarding",
@@ -122,8 +117,12 @@ const SECTIONS: { title: string; subtitle: string; names: ToggleName[] }[] = [
     names:    [
       "gws_account_suspend_enabled", "data_transfer_enabled",
       "ad_disable_enabled", "m365_disable_enabled", "isecure_offboard_enabled",
-      "software_revoke_enabled",
     ],
+  },
+  {
+    title:    "Webhooks",
+    subtitle: "Lets external systems report progress back into automation tickets",
+    names:    ["software_revoke_enabled"],
   },
 ];
 
@@ -447,7 +446,7 @@ function GeneralSkeleton() {
   return (
     <div className="space-y-4">
       {SECTIONS.map(({ title, names }) => (
-        <div key={title} className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+        <div key={title} className="rounded-xl bg-white overflow-hidden dark:bg-neutral-900">
           <div className="px-5 py-4 space-y-1.5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-56" />
@@ -487,7 +486,7 @@ function ConfigHistory() {
   if (isLoading || events.length === 0) return null;
 
   return (
-    <div className="mt-4 rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+    <div className="mt-4 rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
       <div className="px-5 py-4">
         <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Recent changes</h2>
         <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">Last {events.length} config edits</p>
@@ -518,7 +517,7 @@ function ConfigHistory() {
 
 function ConfigSkeleton() {
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900 divide-y divide-slate-100 dark:divide-neutral-800">
+    <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900 divide-y divide-slate-100 dark:divide-neutral-800">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="flex items-start gap-4 px-5 py-4">
           <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0 mt-0.5" />
@@ -576,7 +575,7 @@ function GeneralTab() {
   return (
     <div className="space-y-4">
       {SECTIONS.map(({ title, subtitle, names }) => (
-        <div key={title} className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+        <div key={title} className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
           <div className="px-5 py-4">
             <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{title}</h2>
             <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">{subtitle}</p>
@@ -632,7 +631,7 @@ function ConfigTab() {
 
   return (
     <>
-      <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+      <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
         <div className="px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Config</h2>
           <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">
@@ -664,24 +663,74 @@ function ConfigTab() {
   );
 }
 
-function AppearanceTab() {
+// A miniature mock of the dashboard itself (a thin sidebar strip + a
+// couple of content lines), rendered in the theme it represents -- so
+// picking "Dark" shows what dark actually looks like, not just its name.
+function ThemePreviewThumbnail({ variant }: { variant: "light" | "dark" | "split" }) {
+  const halves = variant === "split" ? (["light", "dark"] as const) : ([variant] as const);
   return (
-    <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+    <div className="flex h-12 w-16 flex-shrink-0 overflow-hidden rounded-md border border-slate-200 dark:border-neutral-700">
+      {halves.map((half, i) => (
+        <div
+          key={i}
+          className={cn(
+            "flex flex-1",
+            half === "light" ? "bg-white" : "bg-neutral-900"
+          )}
+        >
+          <div className={cn("w-2.5 flex-shrink-0 border-r", half === "light" ? "bg-slate-100 border-slate-200" : "bg-neutral-800 border-neutral-700")} />
+          <div className="flex-1 space-y-1 px-1.5 py-2">
+            <div className={cn("h-1 w-6 rounded-full", half === "light" ? "bg-slate-300" : "bg-neutral-600")} />
+            <div className={cn("h-1 w-full rounded-full", half === "light" ? "bg-slate-200" : "bg-neutral-700")} />
+            <div className={cn("h-1 w-4/5 rounded-full", half === "light" ? "bg-slate-200" : "bg-neutral-700")} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const THEME_CARDS: { value: Theme; label: string; variant: "light" | "dark" | "split" }[] = [
+  { value: "light", label: "Light", variant: "light" },
+  { value: "dark", label: "Dark", variant: "dark" },
+  { value: "system", label: "Match browser", variant: "split" },
+];
+
+function AppearanceTab() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
       <div className="px-5 py-4">
         <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Appearance</h2>
         <p className="text-xs text-slate-500 mt-0.5 dark:text-neutral-400">How the dashboard looks on this device</p>
       </div>
-      <div className="flex items-start gap-4 px-5 py-4 border-t border-slate-100 dark:border-neutral-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5">
-          <SunMoon className="h-5 w-5" style={{ color: "#4338ca" }} />
-        </div>
-        <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Theme</p>
-            <p className="mt-0.5 text-xs text-slate-500 leading-relaxed dark:text-neutral-400">Light, dark, or match your system setting.</p>
-          </div>
-          <ThemeToggle />
-        </div>
+      <div
+        role="radiogroup"
+        aria-label="Theme"
+        className="grid grid-cols-1 gap-3 px-5 py-4 border-t border-slate-100 dark:border-neutral-800 sm:grid-cols-3"
+      >
+        {THEME_CARDS.map(({ value, label, variant }) => (
+          <label
+            key={value}
+            className={cn(
+              "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors",
+              theme === value
+                ? "border-blue-500 ring-1 ring-blue-500"
+                : "border-slate-200 hover:border-slate-300 dark:border-neutral-700 dark:hover:border-neutral-600"
+            )}
+          >
+            <input
+              type="radio"
+              name="theme"
+              value={value}
+              checked={theme === value}
+              onChange={() => setTheme(value)}
+              className="h-4 w-4 flex-shrink-0 accent-blue-600"
+            />
+            <ThemePreviewThumbnail variant={variant} />
+            <span className="text-sm font-medium text-slate-800 dark:text-neutral-200">{label}</span>
+          </label>
+        ))}
       </div>
     </div>
   );

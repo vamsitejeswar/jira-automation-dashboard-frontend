@@ -314,7 +314,14 @@ function HrTicketEditForm({ ticket, onDone }: { ticket: HrTicket; onDone: () => 
           Cancel
         </Button>
         <Button size="sm" disabled={!canSave || mutation.isPending} onClick={handleSave}>
-          {mutation.isPending ? "Saving..." : "Save changes"}
+          {mutation.isPending ? (
+            <>
+              <Spinner className="h-3.5 w-3.5" />
+              <span className="shimmer">Saving...</span>
+            </>
+          ) : (
+            "Save changes"
+          )}
         </Button>
       </div>
     </div>
@@ -394,7 +401,7 @@ function HrTicketDetailPanel({ issueKey, onBack }: { issueKey: string; onBack: (
 
       {isLoading && (
         <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500 dark:text-neutral-400">
-          <Spinner className="h-4 w-4" /> Loading the latest details from Jira...
+          <Spinner className="h-4 w-4" /> <p className="shimmer">Loading the latest details from Jira...</p>
         </div>
       )}
       {isError && !isLoading && (

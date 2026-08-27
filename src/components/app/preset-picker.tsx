@@ -11,17 +11,25 @@ export function PresetPicker<T extends string>({
   options,
   value,
   onChange,
+  tabClassName = "px-2.5 py-1.5 text-xs",
 }: {
   options: { key: T; label: string }[];
   value: T;
   onChange: (key: T) => void;
+  // p-1 (list, from Tabs' own default) + this tab's own vertical padding
+  // + its text size's line height need to add up to whatever height the
+  // rest of that page's filter row is using. The default here lands on
+  // exactly h-9 (8 + 12 + text-xs's 16px), matching every filter row's
+  // search box/date button across the app -- override only if some page
+  // deliberately needs a different row height than the rest.
+  tabClassName?: string;
 }) {
   return (
     <Tabs value={value} onValueChange={(next) => onChange(next as T)}>
       <TabsList>
         <TabsIndicator />
         {options.map((opt) => (
-          <TabsTab key={opt.key} value={opt.key}>
+          <TabsTab key={opt.key} value={opt.key} className={tabClassName}>
             {opt.label}
           </TabsTab>
         ))}

@@ -136,7 +136,7 @@ function statusStyle(status: string) {
 function TicketDetailSkeleton() {
   return (
     <div className="px-4 py-4 space-y-4">
-      <div className="rounded-xl bg-white dark:bg-neutral-900 shadow-sm p-6">
+      <div className="rounded-xl bg-white dark:bg-neutral-900 p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3 flex-1">
             <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ function TicketDetailSkeleton() {
           <Skeleton className="h-4 w-24 flex-shrink-0" />
         </div>
       </div>
-      <div className="rounded-xl bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
         <div className="px-6 py-4">
           <Skeleton className="h-5 w-32" />
         </div>
@@ -200,7 +200,7 @@ export function TicketDetail() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Breadcrumb — always visible */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6 flex items-center gap-2">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center gap-2">
         <Link
           to="/tickets"
           className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 transition-colors"
@@ -221,7 +221,7 @@ export function TicketDetail() {
       ) : (
       <div className="px-4 py-4 space-y-4">
       {/* Header card */}
-      <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
         <div className="h-1.5" style={{ background: flowMeta?.color ?? "#64748b" }} />
         <div className="p-6 flex items-start justify-between gap-6">
           <div className="flex items-start gap-4">
@@ -283,7 +283,7 @@ export function TicketDetail() {
             href={t!.jiraUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline shrink-0"
+            className="flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
           >
             Open in Jira <ExternalLink className="h-3.5 w-3.5" />
           </a>
@@ -292,13 +292,13 @@ export function TicketDetail() {
 
       {/* Stage timeline -- simplified Created -> ... -> Closed digest, read
           at a glance before the full raw audit log below. */}
-      <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden p-6">
+      <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden p-6">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300 mb-4">Stage timeline</h2>
         <StageTimeline stages={t!.stages ?? []} />
       </div>
 
       {/* Timeline */}
-      <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
         <div className="px-6 py-4">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Audit timeline</h2>
         </div>

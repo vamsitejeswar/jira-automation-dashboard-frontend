@@ -65,7 +65,7 @@ function AnomaliesSkeleton() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm flex items-center gap-4">
+          <div key={i} className="rounded-xl bg-white dark:bg-neutral-900 px-5 py-4 flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
             <div className="space-y-2">
               <Skeleton className="h-7 w-12" />
@@ -77,7 +77,7 @@ function AnomaliesSkeleton() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Breakdown by flow & status */}
-        <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden shadow-sm lg:col-span-2">
+        <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden lg:col-span-2">
           <div className="px-5 py-4 space-y-1.5">
             <Skeleton className="h-4 w-44" />
             <Skeleton className="h-3 w-32" />
@@ -95,7 +95,7 @@ function AnomaliesSkeleton() {
         </div>
 
         {/* Reliability donut */}
-        <div className="flex flex-col rounded-xl bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+        <div className="flex flex-col rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
           <div className="px-5 py-4 space-y-1.5">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-36" />
@@ -107,7 +107,7 @@ function AnomaliesSkeleton() {
       </div>
 
       {/* Event list */}
-      <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
         <div className="px-5 py-4 flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded-sm" />
           <Skeleton className="h-4 w-28" />
@@ -246,7 +246,7 @@ export function Anomalies() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center">
         {/* Filter bar */}
         <div className="flex flex-wrap items-center gap-3">
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
@@ -257,6 +257,7 @@ export function Anomalies() {
               to:   parseYMD(preset === "custom" ? customTo   : dates.to),
             }}
             onChange={updateCustomRangeFromPicker}
+            className="h-9"
           />
 
           <SelectField
@@ -264,14 +265,14 @@ export function Anomalies() {
             placeholder="All flows"
             value={flow ?? ""}
             onValueChange={updateFlow}
-            className="w-44"
+            className="w-44 !h-9"
           />
           <SelectField
             options={SEVERITY_OPTIONS}
             placeholder="Any severity"
             value={severity ?? ""}
             onValueChange={updateSeverity}
-            className="w-36"
+            className="w-36 !h-9"
           />
 
           <div className="flex items-center gap-2 ml-auto">
@@ -281,7 +282,7 @@ export function Anomalies() {
                 Cloud Logging retention is 30 days.
               </div>
             )}
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!events.length} className="h-9 gap-2">
               <Download className="h-3.5 w-3.5" />
               Export Excel
             </Button>
@@ -300,7 +301,7 @@ export function Anomalies() {
         <div className="px-4 py-4 space-y-4">
           {/* Stats bar */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/40 flex-shrink-0">
                 <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
@@ -309,7 +310,7 @@ export function Anomalies() {
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Events scanned</p>
               </div>
             </div>
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950/40 flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
               </div>
@@ -318,7 +319,7 @@ export function Anomalies() {
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Failures detected</p>
               </div>
             </div>
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/40 flex-shrink-0">
                 <Zap className="h-5 w-5 text-amber-500 dark:text-amber-400" />
               </div>
@@ -335,7 +336,7 @@ export function Anomalies() {
             <div className="grid gap-4 lg:grid-cols-3">
             {/* Breakdown -- a real bar chart, since that's what this data
                 actually is: flow+status combinations ranked by count. */}
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm lg:col-span-2">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden lg:col-span-2">
               <div className="px-5 py-4">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Breakdown by flow &amp; status</h2>
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Click columns to sort</p>
@@ -402,7 +403,7 @@ export function Anomalies() {
                 inside it. FailureDonut anchors its content to the top rather
                 than centering, so any leftover height reads as ordinary
                 bottom padding inside the card, not a stray gap. */}
-            <div className="flex flex-col rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+            <div className="flex flex-col rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
               <div className="px-5 py-4">
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Reliability</h2>
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Of events scanned this period</p>
@@ -412,7 +413,7 @@ export function Anomalies() {
             </div>
 
             {/* Event list */}
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
               <div className="px-5 py-4 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">

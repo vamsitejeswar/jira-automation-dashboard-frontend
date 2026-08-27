@@ -7,10 +7,9 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Search, Download, RotateCw } from "lucide-react";
+import { Search, Download, RotateCw, ChevronUp, ChevronDown } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/app/select-field";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
@@ -27,7 +26,7 @@ import { toast } from "@/components/ui/toast";
 import { getTickets, retryCredentialEmail } from "@/api";
 import type { TicketFilters } from "@/api";
 import type { TicketSummary } from "@/api";
-import { formatIST } from "@/lib/utils";
+import { formatIST, cn } from "@/lib/utils";
 import { exportToExcel, ticketsToExcelRows } from "@/lib/export";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { Pagination } from "@/components/app/pagination";
@@ -119,7 +118,7 @@ const columns = [
     cell: (info) => (
       <Link
         to={`/tickets/${info.getValue()}`}
-        className="font-mono text-xs font-bold text-blue-600 hover:underline whitespace-nowrap"
+        className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
       >
         {info.getValue()}
       </Link>
@@ -172,7 +171,7 @@ const columns = [
     cell: (info) => {
       const email = info.getValue();
       return email ? (
-        <Link to={`/employees?q=${encodeURIComponent(email)}`} className="text-xs text-blue-600 hover:underline">
+        <Link to={`/employees?q=${encodeURIComponent(email)}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
           {email}
         </Link>
       ) : (
@@ -193,6 +192,12 @@ const columns = [
   }),
 ];
 
+// Sorts just the current (server-paginated) page -- consistent with every
+// other sortable table in this dashboard, which sorts what's already been
+// fetched rather than re-querying per sort.
+type SortField = "issueKey" | "title" | "flow" | "currentStatus" | "employeeEmail" | "updatedAt";
+const SORTABLE_COLUMNS = new Set<string>(["issueKey", "title", "flow", "currentStatus", "employeeEmail", "updatedAt"]);
+
 const SEARCH_DEBOUNCE_MS = 400;
 
 export function Tickets() {
@@ -204,6 +209,13 @@ export function Tickets() {
     return { page: 1, pageSize: 25, from: dates.from, to: dates.to };
   });
   const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<SortField>("updatedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir("asc"); }
+  }
 
   function updatePreset(p: DatePreset) {
     setPreset(p);
@@ -225,13 +237,27 @@ export function Tickets() {
     queryFn: () => getTickets(filters),
   });
 
+  const sortedResults = [...(data?.results ?? [])].sort((a, b) => {
+    const av = a[sortField] ?? "";
+    const bv = b[sortField] ?? "";
+    const cmp = String(av).localeCompare(String(bv));
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
   const table = useReactTable({
-    data: data?.results ?? [],
+    data: sortedResults,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     pageCount: data ? Math.ceil(data.total / (filters.pageSize ?? 25)) : 0,
   });
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) return <ChevronUp className="h-3 w-3 opacity-30" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="h-3 w-3 text-blue-500" />
+      : <ChevronDown className="h-3 w-3 text-blue-500" />;
+  }
 
   function applySearch() {
     setFilters((f) => ({ ...f, q: search, page: 1 }));
@@ -255,19 +281,19 @@ export function Tickets() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center">
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={updatePreset} />
           <DatePickerWithRange
             value={{ from: parseYMD(filters.from), to: parseYMD(filters.to) }}
             onChange={updateCustomRangeFromPicker}
+            className="h-9"
           />
-          <Button size="sm" className="h-8 text-xs" onClick={applySearch}>Search</Button>
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-xs"
+            className="h-9 text-xs"
             onClick={() => {
               const dates = getPresetDates("7d");
               setPreset("7d");
@@ -287,7 +313,7 @@ export function Tickets() {
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
           <Input
             placeholder="Issue key or email..."
-            className="pl-8 h-8 text-xs"
+            className="pl-8 h-9 text-xs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
@@ -298,21 +324,21 @@ export function Tickets() {
           placeholder="All flows"
           value={filters.flow ?? ""}
           onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
-          className="w-44"
+          className="w-44 !h-9"
         />
         <Button
           variant="outline"
           size="sm"
           onClick={handleExport}
           disabled={!data?.results.length}
-          className="gap-2"
+          className="h-9 gap-2"
         >
           <Download className="h-3.5 w-3.5" />
           Export Excel
         </Button>
       </div>
       {/* Table */}
-      <Card className="overflow-hidden">
+      <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
         {isLoading ? (
           <div className="space-y-3.5 px-4 py-3">
             <div className="flex items-center gap-4">
@@ -341,14 +367,26 @@ export function Tickets() {
               <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
-                    {hg.headers.map((h) => (
-                      <th
-                        key={h.id}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap"
-                      >
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </th>
-                    ))}
+                    {hg.headers.map((h) => {
+                      const sortable = SORTABLE_COLUMNS.has(h.column.id);
+                      return (
+                        <th
+                          key={h.id}
+                          className={cn(
+                            "px-4 py-3 text-left whitespace-nowrap",
+                            sortable && "select-none cursor-pointer group"
+                          )}
+                          onClick={sortable ? () => toggleSort(h.column.id as SortField) : undefined}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 group-hover:text-slate-700 dark:group-hover:text-neutral-300 transition-colors">
+                              {flexRender(h.column.columnDef.header, h.getContext())}
+                            </span>
+                            {sortable && <SortIcon field={h.column.id as SortField} />}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 ))}
               </thead>
@@ -369,7 +407,7 @@ export function Tickets() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Pagination */}
       {data && (

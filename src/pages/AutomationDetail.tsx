@@ -57,7 +57,7 @@ const AUTOMATION_META: Record<string, { label: string; icon: React.ElementType; 
 function AutomationDetailSkeleton() {
   return (
     <div className="px-4 py-4 space-y-4">
-      <div className="rounded-xl bg-white dark:bg-neutral-900 shadow-sm p-6 space-y-3">
+      <div className="rounded-xl bg-white dark:bg-neutral-900 p-6 space-y-3">
         <Skeleton className="h-6 w-56" />
         <Skeleton className="h-4 w-96" />
       </div>
@@ -81,7 +81,7 @@ export function AutomationDetail() {
 
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
-      <div className="border-b bg-white dark:bg-neutral-900 px-8 py-6 flex items-center gap-2">
+      <div className="border-b bg-white dark:bg-neutral-900 px-8 min-h-20 flex items-center gap-2">
         <Link to="/schedules" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           System Health
@@ -97,7 +97,7 @@ export function AutomationDetail() {
       ) : (
         <div className="px-4 py-4 space-y-4">
           {/* What this is, is it on */}
-          <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
             <div className="h-1.5" style={{ background: meta?.color ?? "#64748b" }} />
             <div className="p-6 flex items-start gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl flex-shrink-0" style={{ background: (meta?.color ?? "#64748b") + "18" }}>
@@ -125,28 +125,28 @@ export function AutomationDetail() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4">
               <p className="text-2xl font-bold text-slate-900 dark:text-neutral-100 tabular-nums">
                 {data!.successRate === null ? "—" : `${data!.successRate}%`}
               </p>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Success rate (last 30 days)</p>
             </div>
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4">
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{data!.doneCount}</p>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Succeeded</p>
             </div>
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4">
               <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{data!.failedCount}</p>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Failed</p>
             </div>
-            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 shadow-sm">
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4">
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{data!.inFlightCount}</p>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">Still in flight</p>
             </div>
           </div>
 
           {/* Recent runs */}
-          <div className="rounded-xl border bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
             <div className="px-5 py-4 border-b">
               <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Recent runs</h2>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">{data!.ticketCount} tickets were processed by this automation in the last 30 days</p>
@@ -171,7 +171,7 @@ export function AutomationDetail() {
                         <td className="px-5 py-3 whitespace-nowrap">
                           {e.issueKey ? (
                             <HoverCard>
-                              <HoverCardTrigger render={<Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 hover:underline" />}>
+                              <HoverCardTrigger render={<Link to={`/tickets/${e.issueKey}`} className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline" />}>
                                 {e.issueKey}
                               </HoverCardTrigger>
                               <HoverCardContent>

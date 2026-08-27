@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
   Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, Activity, AlertTriangle, Play, Loader2,
-  ArrowUpRight, Search, TrendingUp, TrendingDown,
+  ArrowUpRight, Search, TrendingUp, TrendingDown, Info,
 } from "lucide-react";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
@@ -58,9 +58,32 @@ const INTEGRATION_STATUS_COPY: Record<IntegrationStatus, string> = {
 function OverviewSkeleton() {
   return (
     <div className="px-4 py-4 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl bg-white dark:bg-neutral-900 p-5 flex items-center gap-4">
+          <Skeleton className="h-16 w-16 rounded-full flex-shrink-0" />
+          <div className="min-w-[9rem] space-y-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <div className="hidden shrink-0 grid-cols-3 gap-2 border-l border-slate-100 pl-5 dark:border-neutral-800 sm:grid">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-14 w-20 rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl bg-white dark:bg-neutral-900 p-5 flex items-center gap-4">
+          <div className="min-w-[9rem] space-y-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <Skeleton className="h-16 flex-1 rounded-lg" />
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden flex flex-col dark:bg-neutral-900">
+          <div key={i} className="rounded-xl bg-white overflow-hidden flex flex-col dark:bg-neutral-900">
             <div className="p-5 flex-1 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -78,7 +101,7 @@ function OverviewSkeleton() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+      <div className="rounded-xl bg-white overflow-hidden dark:bg-neutral-900">
         <div className="px-5 py-4 flex items-center justify-between">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-3 w-36" />
@@ -87,7 +110,7 @@ function OverviewSkeleton() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-xl bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+          <div key={i} className="rounded-xl bg-white overflow-hidden dark:bg-neutral-900">
             <div className="px-5 py-4"><Skeleton className="h-4 w-36" /></div>
             <div className="space-y-3 px-5 pb-5">
               {[...Array(5)].map((_, j) => (
@@ -106,6 +129,31 @@ function OverviewSkeleton() {
   );
 }
 
+// Counts a displayed number up from 0 to its real value on mount/whenever
+// it changes, instead of the value just appearing.
+function useCountUp(target: number, duration = 900): number {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setValue(target);
+      return;
+    }
+    setValue(0);
+    let raf: number;
+    const start = performance.now();
+    function tick(now: number) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
 /* ── KPI tile ───────────────────────────────────────────────── */
 function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo }: {
   label: string; value: number; previous?: number; icon: React.ElementType;
@@ -119,7 +167,7 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
   const trendColor = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
     <div
-      className="rounded-xl border border-t-4 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col dark:bg-neutral-900"
+      className="rounded-xl border border-t-4 bg-white overflow-hidden flex flex-col dark:bg-neutral-900"
       style={{ borderTopColor: accent }}
     >
       <div className="p-5 flex-1">
@@ -150,6 +198,180 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
           View details <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
+    </div>
+  );
+}
+
+// Success rate over the real onboarded+offboarded+failures counts already
+// fetched for the KPI row above -- not a separate metric, just the same
+// numbers read as a health ring instead of four flat tiles. The ring's
+// "track" comes from a theme-aware Tailwind background so only the filled
+// wedge needs an inline conic-gradient (transparent past pct%), which
+// keeps this in sync with dark mode without a useTheme() lookup.
+function AutomationHealthCard({ successful, failed, previous }: {
+  successful: number; failed: number;
+  previous?: { successful: number; failed: number };
+}) {
+  const total = successful + failed;
+  const pct = total > 0 ? Math.round((successful / total) * 100) : null;
+  const prevTotal = previous ? previous.successful + previous.failed : undefined;
+  const prevPct = previous && prevTotal! > 0 ? Math.round((previous.successful / prevTotal!) * 100) : undefined;
+  const hasTrend = pct !== null && prevPct !== undefined;
+  const up = hasTrend && pct! >= prevPct!;
+  const TrendIcon = up ? TrendingUp : TrendingDown;
+
+  // Animates the ring filling up from 0 on mount/whenever pct changes,
+  // instead of snapping straight to its final value.
+  const [animatedPct, setAnimatedPct] = useState(0);
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setAnimatedPct(pct ?? 0);
+      return;
+    }
+    setAnimatedPct(0);
+    const id = requestAnimationFrame(() => setAnimatedPct(pct ?? 0));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
+  const circumference = 2 * Math.PI * 28;
+  const animatedTotal = useCountUp(total);
+  const animatedSuccessful = useCountUp(successful);
+  const animatedFailed = useCountUp(failed);
+
+  return (
+    <div className="rounded-xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-5 flex items-center gap-4">
+      <svg viewBox="0 0 64 64" className="h-16 w-16 flex-shrink-0 -rotate-90">
+        <circle cx="32" cy="32" r="28" fill="none" strokeWidth="6" className="stroke-slate-100 dark:stroke-neutral-800" />
+        <circle
+          cx="32"
+          cy="32"
+          r="28"
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          stroke="#10b981"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - animatedPct / 100)}
+          style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)" }}
+        />
+      </svg>
+      <div className="min-w-[9rem]">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Automation health</p>
+        <p className="mt-1 text-3xl font-bold text-slate-900 tabular-nums dark:text-neutral-100">{pct !== null ? `${animatedPct}%` : "—"}</p>
+        {hasTrend ? (
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
+            <TrendIcon className="h-3.5 w-3.5" style={{ color: up ? "#16a34a" : "#dc2626" }} />
+            <span className="font-semibold" style={{ color: up ? "#16a34a" : "#dc2626" }}>
+              {pct! - prevPct! >= 0 ? "+" : ""}{pct! - prevPct!}pp
+            </span>
+            vs previous period
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">Success rate over {total} run{total === 1 ? "" : "s"}</p>
+        )}
+      </div>
+      <div className="hidden shrink-0 grid-cols-3 gap-2 border-l border-slate-300 pl-5 text-xs dark:border-neutral-600 sm:grid">
+        <div className="rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-500/10">
+          <p className="text-[11px] font-medium text-blue-600/80 dark:text-blue-400/80">Total runs</p>
+          <p className="text-3xl font-bold text-blue-600 tabular-nums dark:text-blue-400">{animatedTotal}</p>
+        </div>
+        <div className="rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
+          <p className="text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">Successful</p>
+          <p className="text-3xl font-bold text-emerald-600 tabular-nums dark:text-emerald-400">{animatedSuccessful}</p>
+        </div>
+        <div className="rounded-xl bg-red-50 px-3 py-2 dark:bg-red-500/10">
+          <p className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">Failed</p>
+          <p className="text-3xl font-bold text-red-600 tabular-nums dark:text-red-400">{animatedFailed}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Same byDay series the trend chart below renders as raw volume bars --
+// this reads it as a % line instead, "is reliability getting better or
+// worse day to day," which nothing else on this page shows. A day with no
+// runs at all counts as 100% (nothing failed) rather than a gap, so the
+// line stays continuous.
+function ReliabilityTrendCard({ byDay }: {
+  byDay: { date: string; onboarded: number; offboarded: number; failures: number }[];
+}) {
+  const dailyPct = byDay.map((d) => {
+    const dayTotal = d.onboarded + d.offboarded + d.failures;
+    return dayTotal > 0 ? Math.round(((d.onboarded + d.offboarded) / dayTotal) * 100) : 100;
+  });
+  // Averaging the daily rate, not the latest single day -- one bad day
+  // with only failures on it would otherwise show a jarring "0%" headline
+  // even when the rest of the period was healthy.
+  const avg = dailyPct.length > 0 ? Math.round(dailyPct.reduce((a, b) => a + b, 0) / dailyPct.length) : null;
+  const best = dailyPct.length > 0 ? Math.max(...dailyPct) : null;
+  const worst = dailyPct.length > 0 ? Math.min(...dailyPct) : null;
+  const animatedAvg = useCountUp(avg ?? 0);
+
+  const w = 100;
+  const h = 64;
+  const pad = 6;
+  const points = dailyPct
+    .map((p, i) => {
+      const x = dailyPct.length > 1 ? (i / (dailyPct.length - 1)) * w : w / 2;
+      const y = pad + (1 - p / 100) * (h - pad * 2);
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  // Animates the line "drawing" itself in on mount, using the classic
+  // stroke-dasharray-equal-to-length / dashoffset-from-full-to-zero trick
+  // (getTotalLength() needs the element to already be in the DOM, hence
+  // the effect rather than computing this inline during render).
+  const polylineRef = useRef<SVGPolylineElement>(null);
+  const [lineLength, setLineLength] = useState(0);
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    if (!polylineRef.current) return;
+    const length = polylineRef.current.getTotalLength();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setLineLength(length);
+    if (reduceMotion) {
+      setDrawn(true);
+      return;
+    }
+    setDrawn(false);
+    const id = requestAnimationFrame(() => setDrawn(true));
+    return () => cancelAnimationFrame(id);
+  }, [points]);
+
+  return (
+    <div className="rounded-xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-5 flex items-center gap-4">
+      <div className="min-w-[9rem]">
+        <TooltipProvider delay={200}>
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex cursor-default items-center gap-1" />}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">Reliability trend</p>
+              <Info className="h-3 w-3 text-slate-400 dark:text-neutral-500" />
+            </TooltipTrigger>
+            <TooltipContent>Share of runs that succeeded (not failed), per day this period.</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <p className="mt-1 text-3xl font-bold text-slate-900 tabular-nums dark:text-neutral-100">{avg !== null ? `${animatedAvg}%` : "—"}</p>
+        <p className="mt-1 text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
+          {best !== null ? `Avg daily · ${best}% best, ${worst}% worst` : "No data this period"}
+        </p>
+      </div>
+      {dailyPct.length > 0 && (
+        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-16 flex-1">
+          <polyline
+            ref={polylineRef}
+            points={points}
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+            strokeDasharray={lineLength}
+            strokeDashoffset={drawn ? 0 : lineLength}
+            style={{ transition: "stroke-dashoffset 1.2s ease-out" }}
+          />
+        </svg>
+      )}
     </div>
   );
 }
@@ -211,7 +433,7 @@ function GlobalSearchBox() {
       {loading && <Spinner className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />}
       {showSuggestions && suggestions.length > 0 && (
         <ul
-          className="absolute z-10 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg dark:bg-neutral-900"
+          className="absolute z-10 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border bg-white lg dark:bg-neutral-900"
           onMouseDown={(e) => e.preventDefault()}
         >
           {suggestions.map((s, i) => (
@@ -328,7 +550,7 @@ export function Overview() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Header — always visible */}
-      <div className="border-b bg-white px-8 py-6 dark:bg-neutral-900">
+      <div className="border-b bg-white px-8 min-h-20 flex items-center dark:bg-neutral-900">
         <div className="flex flex-wrap items-center gap-3">
           <GlobalSearchBox />
           <PresetPicker options={DATE_PRESETS} value={preset} onChange={setPreset} />
@@ -340,6 +562,7 @@ export function Overview() {
               setCustomTo(range?.to ? format(range.to, "yyyy-MM-dd") : "");
               setPreset("custom");
             }}
+            className="h-9"
           />
         </div>
       </div>
@@ -356,12 +579,12 @@ export function Overview() {
               2. All dismissed → muted pill with recover link
               3. Action needed → severity-grouped card with per-row left border */}
           {systemHealthy ? (
-            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/40">
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">All systems operational</p>
             </div>
           ) : allDismissed ? (
-            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
               <span className="h-2 w-2 shrink-0 rounded-full bg-neutral-400 dark:bg-neutral-600" />
               <p className="text-sm text-slate-500 dark:text-neutral-400">Notifications are muted. These items are still unresolved.</p>
               <button
@@ -372,21 +595,24 @@ export function Overview() {
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden dark:border-neutral-800 dark:bg-neutral-900">
+            <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden dark:border-neutral-800 dark:bg-neutral-900">
 
               {/* Header */}
               <div className="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
-                <span className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Action needed</span>
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                </span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">Need attention</p>
                 <div className="flex items-center gap-1.5 ml-1">
                   {criticalItems.length > 0 && (
                     <span className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-500 border border-red-500/20 dark:bg-red-500/15 dark:border-red-500/25">
-                      {criticalItems.length} critical
+                      {criticalItems.length} Critical
                     </span>
                   )}
                   {warningItems.length > 0 && (
                     <span className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25">
-                      {warningItems.length} warning
+                      {warningItems.length} Warning
                     </span>
                   )}
                 </div>
@@ -481,7 +707,22 @@ export function Overview() {
 
           {/* Integration health -- so a real Jira/GWS/AD/M365 outage reads
               as exactly that, not as an unexplained pile of failed events. */}
-       
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AutomationHealthCard
+              successful={kpis.data!.onboardedCount + kpis.data!.offboardedCount}
+              failed={kpis.data!.failuresCount}
+              previous={
+                kpis.data!.previousPeriod
+                  ? {
+                      successful: kpis.data!.previousPeriod.onboardedCount + kpis.data!.previousPeriod.offboardedCount,
+                      failed: kpis.data!.previousPeriod.failuresCount,
+                    }
+                  : undefined
+              }
+            />
+            <ReliabilityTrendCard byDay={kpis.data!.byDay} />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {KPI_CONFIG.map((c) => (
@@ -499,7 +740,7 @@ export function Overview() {
             ))}
           </div>
 
-          <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+          <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
             <div className="px-5 py-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
                 <Activity className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
@@ -514,13 +755,13 @@ export function Overview() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Anomalies */}
-            <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+            <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
               <div className="flex items-center justify-between px-5 py-4">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
                   <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
                   Recent anomalies
                 </h2>
-                <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+                <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   View all <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
@@ -549,7 +790,7 @@ export function Overview() {
                       {a.issueKey && (
                         <Link
                           to={`/tickets/${a.issueKey}`}
-                          className="flex items-center gap-0.5 shrink-0 font-mono text-xs font-bold text-blue-600 hover:underline"
+                          className="flex items-center gap-0.5 shrink-0 font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           {a.issueKey}
                           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -564,7 +805,7 @@ export function Overview() {
             </div>
 
             {/* Jobs */}
-            <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-neutral-900">
+            <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
               <div className="px-5 py-4 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Upcoming scheduled runs</h2>
@@ -618,7 +859,7 @@ export function Overview() {
                         title="Run now, without waiting for the schedule"
                       >
                         {isRunningThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                        Run Now
+                        {isRunningThis ? <span className="shimmer">Running</span> : <span>Run Now</span>}
                       </Button>
                     </li>
                     );
@@ -630,7 +871,7 @@ export function Overview() {
           </div>
              {health.data && (
             <TooltipProvider>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 shadow-sm dark:bg-neutral-900">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-5 py-3 dark:bg-neutral-900">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1 dark:text-neutral-500">Integrations</span>
               {(Object.entries(health.data) as [keyof Health, IntegrationStatus][]).map(([key, status]) => (
                 <Tooltip key={key}>

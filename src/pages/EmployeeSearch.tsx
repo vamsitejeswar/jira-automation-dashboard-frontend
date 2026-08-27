@@ -145,7 +145,7 @@ function StepRow({ step }: { step: FlowStep }) {
             <Link
               to={`/tickets/${step.issueKey}`}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-0.5 text-xs font-mono font-bold text-blue-600 hover:underline"
+              className="inline-flex items-center gap-0.5 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
             >
               {step.issueKey}
               <ChevronRight className="h-3 w-3" />
@@ -258,7 +258,7 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
   const dark = resolvedTheme === "dark";
 
   return (
-    <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
       {/* Colored top strip */}
       <div
         className="h-1"
@@ -319,7 +319,7 @@ function RecordCard({ record, showEmail }: { record: EmployeeProgress; showEmail
               href={record.jiraUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-mono font-bold text-blue-600 hover:underline ml-3"
+              className="flex items-center gap-1 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline ml-3"
             >
               {record.issueKey}
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -401,9 +401,9 @@ export function EmployeeSearch() {
     <TooltipProvider delay={200}>
     <div className="min-h-full bg-slate-50 dark:bg-neutral-950">
       {/* Page header */}
-      <div className="border-b bg-white dark:bg-neutral-900 px-6 py-6">
+      <div className="border-b bg-white dark:bg-neutral-900 px-6 min-h-20 flex items-center">
         {/* Search */}
-        <div className="flex gap-2 max-w-2xl">
+        <div className="flex w-full gap-2 max-w-2xl">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
@@ -441,7 +441,7 @@ export function EmployeeSearch() {
                     className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/50 border-b last:border-b-0"
                   >
                     {s.issueKey && (
-                      <span className="shrink-0 font-mono text-xs font-bold text-blue-600">{s.issueKey}</span>
+                      <span className="shrink-0 font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{s.issueKey}</span>
                     )}
                     <span className="flex-1 min-w-0 truncate text-sm text-slate-700 dark:text-neutral-300">{s.title ?? s.employeeEmail ?? s.issueKey}</span>
                     {s.employeeEmail && (
@@ -463,7 +463,7 @@ export function EmployeeSearch() {
         {/* Loading */}
         {isLoading && (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 rounded-xl border bg-white dark:bg-neutral-900 px-6 py-4 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border bg-white dark:bg-neutral-900 px-6 py-4">
               <Skeleton className="h-12 w-12 rounded-xl flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-48" />
@@ -472,7 +472,7 @@ export function EmployeeSearch() {
             </div>
             <div className="grid gap-5 lg:grid-cols-2">
               {[0, 1].map((i) => (
-                <div key={i} className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+                <div key={i} className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
                   <div className="px-5 pt-4 pb-3 flex items-center gap-3">
                     <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
                     <div className="space-y-2">
@@ -506,7 +506,7 @@ export function EmployeeSearch() {
         {data && !isLoading && (
           <>
             {/* Identity bar */}
-            <div className="mb-6 flex items-center gap-4 rounded-xl border bg-white dark:bg-neutral-900 px-6 py-4 shadow-sm">
+            <div className="mb-6 flex items-center gap-4 rounded-xl border bg-white dark:bg-neutral-900 px-6 py-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 flex-shrink-0">
                 <UserCircle2 className="h-6 w-6 text-white" />
               </div>
@@ -527,7 +527,7 @@ export function EmployeeSearch() {
                 <div className="flex gap-4 flex-shrink-0">
                   {onboarding.length > 0 && (
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600 tabular-nums">{onboarding.length}</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{onboarding.length}</p>
                       <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Onboarding</p>
                     </div>
                   )}

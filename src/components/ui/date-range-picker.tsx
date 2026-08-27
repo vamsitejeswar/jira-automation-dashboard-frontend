@@ -7,6 +7,7 @@ import { type DateRange } from "react-day-picker"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
 import {
   Popover,
   PopoverContent,
@@ -17,6 +18,7 @@ export function DatePickerWithRange({
   value,
   onChange,
   align = "start",
+  className,
 }: {
   value?: DateRange
   onChange?: (range: DateRange | undefined) => void
@@ -24,6 +26,10 @@ export function DatePickerWithRange({
   // Overview's header) -- the two-month calendar is wide enough to clip
   // past the right edge with the default "start" alignment there.
   align?: "start" | "center" | "end"
+  // Lets a page line the trigger's height up with whatever else sits next
+  // to it in its own filter row, without changing the default height
+  // everywhere else this is used.
+  className?: string
 } = {}) {
   const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 20),
@@ -34,7 +40,7 @@ export function DatePickerWithRange({
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" id="date-picker-range" className="justify-start px-2.5 font-normal"><CalendarIcon data-icon="inline-start" />{date?.from ? (
+      <PopoverTrigger render={<Button variant="outline" id="date-picker-range" className={cn("justify-start px-2.5 font-normal", className)}><CalendarIcon data-icon="inline-start" />{date?.from ? (
           date.to ? (
             <>
               {format(date.from, "LLL dd, y")} -{" "}

@@ -119,6 +119,11 @@ export const TicketDetailSchema = TicketSummarySchema.extend({
   jiraStatus: z.string().nullable().optional(),
   createdAt: z.string().nullable().optional(),
   employeeName: z.string().nullable().optional(),
+  // Only ever one of these two is populated -- onboarding and offboarding
+  // are separate Jira tickets, not two fields on one, so whichever is
+  // present tells you which kind of ticket this is.
+  joiningDate: z.string().nullable().optional(),
+  lastWorkingDay: z.string().nullable().optional(),
   stages: z.array(StageSchema).optional(),
 });
 export type TicketDetail = z.infer<typeof TicketDetailSchema>;

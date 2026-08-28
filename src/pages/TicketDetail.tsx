@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { OutcomeBadge, SeverityBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
 import { StageTimeline } from "@/components/app/StageTimeline";
 import { getTicketDetail, getAnomalies } from "@/api";
-import { formatIST } from "@/lib/utils";
+import { formatIST, formatISTDate } from "@/lib/utils";
 import type { AuditEvent } from "@/api";
 
 const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
@@ -276,6 +276,18 @@ export function TicketDetail() {
                   <span className="text-slate-500 dark:text-neutral-400">Last updated: </span>
                   {formatIST(t!.updatedAt)}
                 </div>
+                {t!.joiningDate && (
+                  <div>
+                    <span className="text-slate-500 dark:text-neutral-400">Joining date: </span>
+                    {formatISTDate(t!.joiningDate)}
+                  </div>
+                )}
+                {t!.lastWorkingDay && (
+                  <div>
+                    <span className="text-slate-500 dark:text-neutral-400">Last working day: </span>
+                    {formatISTDate(t!.lastWorkingDay)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -354,11 +366,11 @@ export function TicketDetail() {
               const flowMeta = FLOW_META[item.event.flow];
               const FlowIcon = flowMeta?.icon ?? ToggleLeft;
               const rowStyle = item.isAnomaly
-                ? "border-l-amber-400 bg-amber-50/30"
+                ? "border-l-amber-400 bg-amber-50/30 dark:bg-amber-950/40"
                 : (SEVERITY_ROW[item.event.severity] ?? "border-l-slate-200");
 
               return (
-                <li key={i} className={`flex items-start gap-3 border-l-4 px-6 py-4 hover:brightness-[0.98] transition-colors ${rowStyle}`}>
+                <li key={i} className={`flex items-center gap-3 border-l-4 px-6 py-4 hover:brightness-[0.98] transition-colors ${rowStyle}`}>
                   <div
                     className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0"
                     style={{ background: (flowMeta?.color ?? "#64748b") + "18" }}

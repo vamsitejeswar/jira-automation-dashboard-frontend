@@ -408,7 +408,7 @@ export function EmployeeSearch() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               type="text"
-              placeholder="Email, ticket ID (e.g. WOH-124), or employee name"
+              placeholder="Email, ticket ID (e.g. VSD-124), or employee name"
               className="w-full h-9 pl-8 pr-8 text-xs"
               value={inputVal}
               onChange={e => { setInputVal(e.target.value); setShowSuggestions(true); }}

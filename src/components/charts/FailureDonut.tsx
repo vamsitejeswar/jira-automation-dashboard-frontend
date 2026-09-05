@@ -22,7 +22,7 @@ export function FailureDonut({ total, failures }: { total: number; failures: num
   const tooltipText = dark ? "#f1f5f9" : "#0f172a";
 
   const data = {
-    labels: ["Normal", "Failures"],
+    labels: ["Normal", "Anomalies"],
     datasets: [
       {
         data: [normal, failures],
@@ -79,7 +79,7 @@ export function FailureDonut({ total, failures }: { total: number; failures: num
         </span>
         <span className="flex items-center gap-2 text-slate-500 dark:text-neutral-400">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: failureColor }} />
-          Failures ({failures})
+          Anomalies ({failures})
         </span>
       </div>
     </div>

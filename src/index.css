@@ -91,6 +91,14 @@
   }
 }
 
+/* Slow-drifting multi-hue ring for the Sidebar's "AI Assistant" button --
+   a wrapper with padding = ring thickness reveals this gradient as a thin
+   outline around the (near-opaque) button sitting inside it. */
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
@@ -21,11 +21,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { OutcomeBadge, FlowBadge, isSelfEvidentError } from "@/components/app/badges";
+import { OutcomeBadge, FlowBadge, JiraStatusBadge, DateStatusBadge, isSelfEvidentError } from "@/components/app/badges";
 import { toast } from "@/components/ui/toast";
-import { getTickets, retryCredentialEmail } from "@/api";
-import type { TicketFilters } from "@/api";
-import type { TicketSummary } from "@/api";
+import { getTickets, getParentTickets, retryCredentialEmail } from "@/api";
+import type { TicketFilters, ParentTicketFilters } from "@/api";
+import type { TicketSummary, ParentTicket } from "@/api";
 import { formatIST, cn } from "@/lib/utils";
 import { exportToExcel, ticketsToExcelRows } from "@/lib/export";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
@@ -46,6 +46,26 @@ const FLOW_OPTIONS = [
   { value: "software_revoke", label: "Software Revoke" },
   { value: "hr_update", label: "HR Update" },
   { value: "offboarding_sla", label: "Offboarding SLA Breach" },
+];
+
+// Browse mode: instead of every audit-event-derived subtask row, show only
+// real Onboarding/Offboarding PARENT tickets (GET /api/admin/parent-tickets)
+// -- a lighter index into Employee Search's full multi-subtask breakdown,
+// which is where each row actually links.
+const TYPE_OPTIONS = [
+  { value: "onboarding", label: "Onboarding" },
+  { value: "offboarding", label: "Offboarding" },
+];
+
+// Onboarding/Offboarding parent-ticket browse mode only -- filters on the
+// ticket's own joining date / Last Working Day against today. "Overdue"
+// means that date has passed but the real Jira status isn't terminal yet --
+// the same still-stuck-past-deadline signal as the SLA breach check, surfaced
+// here so it can be filtered to directly instead of only showing up as a
+// once-ever anomaly notification.
+const DATE_STATUS_OPTIONS = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "overdue", label: "Overdue" },
 ];
 
 function parseYMD(s: string | undefined): Date | undefined {
@@ -192,6 +212,92 @@ const columns = [
   }),
 ];
 
+// A parent ticket's own issueKey has no audit trail of its own (events are
+// logged against the SUBTASK that actually did the work) -- clicking one
+// deep-links into Employee Search instead, which already resolves the
+// employee and renders every sibling subtask's progress (the exact
+// multi-record breakdown this row is just an index into).
+//
+// Employee Search's whole record-building step is keyed on a resolved
+// employee email (see get_employee_progress's resolved_emails filter) --
+// a ticket whose Employee Email field is genuinely blank on Jira (a real
+// data gap, confirmed live 2026-08-28: search_employees finds the ticket
+// by title fine, but there's no email for it to build a record around)
+// will always dead-end there with "No employee matched", even though the
+// ticket itself is real. Route those straight to the plain ticket detail
+// page instead, which only needs the issueKey.
+function parentTicketLink(ticket: ParentTicket): string {
+  return ticket.employeeEmail
+    ? `/employees?q=${encodeURIComponent(ticket.employeeEmail)}`
+    : `/tickets/${encodeURIComponent(ticket.issueKey)}`;
+}
+
+const parentCol = createColumnHelper<ParentTicket>();
+
+const parentColumns = [
+  parentCol.accessor("issueKey", {
+    header: "Issue",
+    cell: (info) => (
+      <Link
+        to={parentTicketLink(info.row.original)}
+        className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
+      >
+        {info.getValue()}
+      </Link>
+    ),
+  }),
+  parentCol.accessor("title", {
+    header: "Title",
+    cell: (info) => {
+      const value = info.getValue();
+      return value ? (
+        <Link to={parentTicketLink(info.row.original)} className="text-xs text-slate-700 dark:text-neutral-300 line-clamp-1 max-w-64 block hover:underline">
+          {value}
+        </Link>
+      ) : (
+        <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
+      );
+    },
+  }),
+  parentCol.accessor("employeeEmail", {
+    header: "Employee",
+    cell: (info) => {
+      const email = info.getValue();
+      return email ? (
+        <Link to={`/employees?q=${encodeURIComponent(email)}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+          {email}
+        </Link>
+      ) : (
+        <span className="text-xs text-slate-600 dark:text-neutral-400">—</span>
+      );
+    },
+  }),
+  parentCol.accessor("status", {
+    header: "Jira Status",
+    cell: (info) => info.getValue() ? <JiraStatusBadge status={info.getValue()!} /> : <Badge variant="ghost">—</Badge>,
+  }),
+  parentCol.accessor("relevantDate", {
+    header: "Joining / Last Working Day",
+    cell: (info) => {
+      const date = info.getValue();
+      const dateStatus = info.row.original.dateStatus;
+      if (!date) return <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>;
+      return (
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <span className="tabular-nums text-xs text-slate-600 dark:text-neutral-400">{date}</span>
+          {dateStatus && <DateStatusBadge status={dateStatus} />}
+        </div>
+      );
+    },
+  }),
+  parentCol.accessor("createdAt", {
+    header: "Created",
+    cell: (info) => (
+      <span className="tabular-nums text-xs text-slate-600 dark:text-neutral-400 whitespace-nowrap">{formatIST(info.getValue())}</span>
+    ),
+  }),
+];
+
 // Sorts just the current (server-paginated) page -- consistent with every
 // other sortable table in this dashboard, which sorts what's already been
 // fetched rather than re-querying per sort.
@@ -211,6 +317,31 @@ export function Tickets() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // Onboarding/Offboarding parent-ticket browse mode only -- "" = no filter.
+  const [dateStatus, setDateStatus] = useState<"" | "upcoming" | "overdue">("");
+  // "" = the normal subtask-row view below; "onboarding"/"offboarding" =
+  // the parent-ticket browse mode (see parentColumns/getParentTickets above).
+  // Driven by the URL's ?type= so the Sidebar's "All Tickets" > Onboarding/
+  // Offboarding links actually land in the right mode, and so this page's
+  // own dropdown updates the URL back (keeps the sidebar's active-state
+  // highlighting and browser back/forward in sync with what's shown).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const typeParam = searchParams.get("type");
+  const ticketType: "" | "onboarding" | "offboarding" =
+    typeParam === "onboarding" || typeParam === "offboarding" ? typeParam : "";
+  const isParentMode = ticketType !== "";
+
+  function setTicketType(next: "" | "onboarding" | "offboarding") {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) params.set("type", next);
+        else params.delete("type");
+        return params;
+      },
+      { replace: true }
+    );
+  }
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -235,6 +366,22 @@ export function Tickets() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["tickets", filters],
     queryFn: () => getTickets(filters),
+    enabled: !isParentMode,
+  });
+
+  const parentFilters: ParentTicketFilters = {
+    type: (ticketType || "onboarding") as "onboarding" | "offboarding",
+    from: filters.from,
+    to: filters.to,
+    q: filters.q,
+    dateStatus: dateStatus || undefined,
+    page: filters.page,
+    pageSize: filters.pageSize,
+  };
+  const parentQuery = useQuery({
+    queryKey: ["parent-tickets", parentFilters],
+    queryFn: () => getParentTickets(parentFilters),
+    enabled: isParentMode,
   });
 
   const sortedResults = [...(data?.results ?? [])].sort((a, b) => {
@@ -250,6 +397,14 @@ export function Tickets() {
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     pageCount: data ? Math.ceil(data.total / (filters.pageSize ?? 25)) : 0,
+  });
+
+  const parentTable = useReactTable({
+    data: parentQuery.data?.results ?? [],
+    columns: parentColumns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount: parentQuery.data ? Math.ceil(parentQuery.data.total / (filters.pageSize ?? 25)) : 0,
   });
 
   function SortIcon({ field }: { field: SortField }) {
@@ -299,6 +454,8 @@ export function Tickets() {
               setPreset("7d");
               setFilters({ page: 1, pageSize: 25, from: dates.from, to: dates.to });
               setSearch("");
+              setTicketType("");
+              setDateStatus("");
             }}
           >
             Clear
@@ -320,26 +477,52 @@ export function Tickets() {
           />
         </div>
         <SelectField
-          options={FLOW_OPTIONS}
-          placeholder="All flows"
-          value={filters.flow ?? ""}
-          onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
-          className="w-44 !h-9"
+          options={TYPE_OPTIONS}
+          placeholder="All types"
+          value={ticketType}
+          onValueChange={(v) => {
+            setTicketType((v as "onboarding" | "offboarding") || "");
+            setFilters((f) => ({ ...f, page: 1 }));
+          }}
+          className="w-40 !h-9"
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={!data?.results.length}
-          className="h-9 gap-2"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export Excel
-        </Button>
+        {!isParentMode && (
+          <SelectField
+            options={FLOW_OPTIONS}
+            placeholder="All flows"
+            value={filters.flow ?? ""}
+            onValueChange={(v) => setFilters((f) => ({ ...f, flow: v || undefined, page: 1 }))}
+            className="w-44 !h-9"
+          />
+        )}
+        {isParentMode && (
+          <SelectField
+            options={DATE_STATUS_OPTIONS}
+            placeholder="All dates"
+            value={dateStatus}
+            onValueChange={(v) => {
+              setDateStatus((v as "upcoming" | "overdue") || "");
+              setFilters((f) => ({ ...f, page: 1 }));
+            }}
+            className="w-40 !h-9"
+          />
+        )}
+        {!isParentMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={!data?.results.length}
+            className="h-9 gap-2"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Excel
+          </Button>
+        )}
       </div>
       {/* Table */}
       <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
-        {isLoading ? (
+        {(isParentMode ? parentQuery.isLoading : isLoading) ? (
           <div className="space-y-3.5 px-4 py-3">
             <div className="flex items-center gap-4">
               {["w-16", "w-20", "w-20", "w-40", "w-32", "w-28"].map((w, i) => (
@@ -357,10 +540,42 @@ export function Tickets() {
               </div>
             ))}
           </div>
-        ) : isError ? (
-          <ErrorState error={error as Error} onRetry={refetch} />
-        ) : data?.results.length === 0 ? (
-          <EmptyState message="No tickets match your filters" />
+        ) : (isParentMode ? parentQuery.isError : isError) ? (
+          <ErrorState
+            error={(isParentMode ? parentQuery.error : error) as Error}
+            onRetry={isParentMode ? parentQuery.refetch : refetch}
+          />
+        ) : (isParentMode ? parentQuery.data?.results.length === 0 : data?.results.length === 0) ? (
+          <EmptyState message={isParentMode ? `No ${ticketType} tickets match your filters` : "No tickets match your filters"} />
+        ) : isParentMode ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
+                {parentTable.getHeaderGroups().map((hg) => (
+                  <tr key={hg.id}>
+                    {hg.headers.map((h) => (
+                      <th key={h.id} className="px-4 py-3 text-left whitespace-nowrap">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+                          {flexRender(h.column.columnDef.header, h.getContext())}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+                {parentTable.getRowModel().rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -410,15 +625,25 @@ export function Tickets() {
       </div>
 
       {/* Pagination */}
-      {data && (
-        <Pagination
-          page={currentPage}
-          pageSize={filters.pageSize ?? 25}
-          total={data.total}
-          onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
-          itemLabel="tickets"
-        />
-      )}
+      {isParentMode
+        ? parentQuery.data && (
+            <Pagination
+              page={currentPage}
+              pageSize={filters.pageSize ?? 25}
+              total={parentQuery.data.total}
+              onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
+              itemLabel={`${ticketType} tickets`}
+            />
+          )
+        : data && (
+            <Pagination
+              page={currentPage}
+              pageSize={filters.pageSize ?? 25}
+              total={data.total}
+              onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
+              itemLabel="tickets"
+            />
+          )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Circle, MinusCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Circle, MinusCircle, Loader2, Clock } from "lucide-react";
 import { formatIST, cn } from "@/lib/utils";
 import type { Stage } from "@/api";
 
@@ -18,6 +18,19 @@ const STAGE_STATUS_CONFIG: Record<Stage["status"], { icon: React.ElementType; cl
   pending: {
     icon: Circle,
     className: "text-slate-400 dark:text-neutral-500 bg-slate-50 dark:bg-neutral-900 border-slate-200 dark:border-neutral-800",
+  },
+  // A human needs to act (fill in a Jira field) before this step can
+  // proceed -- distinct from "pending" (a real future date, not yet due),
+  // which looks identical to "not started yet" (also an empty grey circle,
+  // same as skipped/not-reached steps). Amber clock, same color language
+  // "in_progress" already uses, so a real action-needed step reads as
+  // clearly different from both a genuine failure (red) and a step that
+  // simply hasn't been reached (grey) -- confirmed live 2026-09-05 that
+  // reusing "pending" for this made a real "waiting for HR" step
+  // indistinguishable from an untouched one.
+  waiting: {
+    icon: Clock,
+    className: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50",
   },
   skipped: {
     icon: MinusCircle,

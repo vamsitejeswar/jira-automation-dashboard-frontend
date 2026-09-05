@@ -143,6 +143,7 @@ export function Anomalies() {
   const [eventSortField, setEventSortField] = useState<EventSortField>("timestamp");
   const [eventSortDir, setEventSortDir]     = useState<"asc" | "desc">("desc");
   const [page, setPage]               = useState(1);
+  const [slaBreachPage, setSlaBreachPage] = useState(1);
 
   const dates = preset === "custom" ? { from: customFrom, to: customTo } : getPresetDates(preset);
   const days   = preset === "today" ? 1 : preset === "custom" ? undefined : parseInt(preset);
@@ -172,12 +173,12 @@ export function Anomalies() {
   // Any change to what's being scanned starts back at page 1 -- the
   // previous page number almost never lines up with a totally different
   // result set.
-  function updatePreset(p: DatePreset) { setPreset(p); setPage(1); }
-  function updateIncludeNormal(v: boolean) { setIncludeNormal(v); setPage(1); }
-  function updateFlow(v: string) { setFlow(v || undefined); setPage(1); }
-  function updateSeverity(v: string) { setSeverity(v || undefined); setPage(1); }
+  function updatePreset(p: DatePreset) { setPreset(p); setPage(1); setSlaBreachPage(1); }
+  function updateIncludeNormal(v: boolean) { setIncludeNormal(v); setPage(1); setSlaBreachPage(1); }
+  function updateFlow(v: string) { setFlow(v || undefined); setPage(1); setSlaBreachPage(1); }
+  function updateSeverity(v: string) { setSeverity(v || undefined); setPage(1); setSlaBreachPage(1); }
   function updateCustomRange(f: string, t: string) {
-    setCustomFrom(f); setCustomTo(t); setPreset("custom"); setPage(1);
+    setCustomFrom(f); setCustomTo(t); setPreset("custom"); setPage(1); setSlaBreachPage(1);
   }
   function updateCustomRangeFromPicker(range: DateRange | undefined) {
     updateCustomRange(
@@ -209,7 +210,12 @@ export function Anomalies() {
   // admin sorted by flow/status instead of count.
   const maxBreakdownCount = Math.max(1, ...breakdown.map((r) => r.count));
 
-  const events = includeNormal ? (data?.allEvents ?? []) : (data?.anomalies ?? []);
+  const allEvents = includeNormal ? (data?.allEvents ?? []) : (data?.anomalies ?? []);
+  // Offboarding SLA Breach is its own table below, not mixed into the
+  // general failure list -- it's a distinct, ongoing "past deadline" state
+  // rather than a one-off event, and reads better grouped on its own.
+  const events = allEvents.filter((e) => e.flow !== "offboarding_sla");
+  const slaBreachEvents = allEvents.filter((e) => e.flow === "offboarding_sla");
   const failureRate = data && data.totalEventsScanned > 0
     ? ((data.totalAnomalies / data.totalEventsScanned) * 100).toFixed(1)
     : "0.0";
@@ -229,18 +235,136 @@ export function Anomalies() {
   // Sorts just the current (server-paginated) page -- consistent with every
   // other sortable table in this dashboard, which sorts what's already been
   // fetched rather than re-querying per sort.
-  const sortedEvents = [...events].sort((a, b) => {
-    const av = a[eventSortField] ?? "";
-    const bv = b[eventSortField] ?? "";
-    const cmp = String(av).localeCompare(String(bv));
-    return eventSortDir === "asc" ? cmp : -cmp;
-  });
+  function sortByEventField<T extends { [K in EventSortField]?: string | null }>(rows: T[]): T[] {
+    return [...rows].sort((a, b) => {
+      const av = a[eventSortField] ?? "";
+      const bv = b[eventSortField] ?? "";
+      const cmp = String(av).localeCompare(String(bv));
+      return eventSortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  const sortedEvents = sortByEventField(events);
+  const sortedSlaBreachEvents = sortByEventField(slaBreachEvents);
+  // Client-side pagination -- this table is a filtered subset of whatever
+  // page the server already returned, so it paginates independently of the
+  // main event list's server-driven `page`.
+  const SLA_BREACH_PAGE_SIZE = 25;
+  const slaBreachPageRows = sortedSlaBreachEvents.slice(
+    (slaBreachPage - 1) * SLA_BREACH_PAGE_SIZE,
+    slaBreachPage * SLA_BREACH_PAGE_SIZE
+  );
 
   function EventSortIcon({ field }: { field: EventSortField }) {
     if (eventSortField !== field) return <ChevronUp className="h-3 w-3 opacity-30" />;
     return eventSortDir === "asc"
       ? <ChevronUp className="h-3 w-3 text-blue-500" />
       : <ChevronDown className="h-3 w-3 text-blue-500" />;
+  }
+
+  // Shared table body between the main event list and the SLA Breach table
+  // below it -- same columns, same row rendering, just a different rows array.
+  function EventTable({ rows, emptyMessage }: { rows: typeof sortedEvents; emptyMessage: string }) {
+    if (rows.length === 0) return <EmptyState message={emptyMessage} />;
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
+            <tr>
+              {EVENT_COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  className="px-5 py-3 text-left select-none cursor-pointer group whitespace-nowrap"
+                  onClick={() => toggleEventSort(col.key)}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 group-hover:text-slate-700 dark:group-hover:text-neutral-300 transition-colors">
+                      {col.label}
+                    </span>
+                    <EventSortIcon field={col.key} />
+                  </div>
+                </th>
+              ))}
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+                Detail
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+            {rows.map((a, i) => (
+              <tr key={i} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <td className="px-5 py-3 whitespace-nowrap">
+                  {a.issueKey ? (
+                    <HoverCard>
+                      <HoverCardTrigger
+                        delay={200}
+                        closeDelay={100}
+                        render={
+                          <Link
+                            to={`/tickets/${a.issueKey}`}
+                            className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                          />
+                        }
+                      >
+                        {a.issueKey}
+                      </HoverCardTrigger>
+                       <HoverCardContent className="w-[28rem]">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200 break-words">
+                          {a.title ?? a.issueKey}
+                        </p>
+                        <div className="mt-1.5 space-y-1 text-xs text-slate-500 dark:text-neutral-400">
+                          {a.employeeEmail && <p className="truncate">Employee: {a.employeeEmail}</p>}
+                          {a.managerEmail && <p className="truncate">Manager: {a.managerEmail}</p>}
+                          {a.createdAt && <p>Created: {formatIST(a.createdAt)}</p>}
+                          <p>Updated: {formatIST(a.timestamp)}</p>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  ) : (
+                    <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
+                  )}
+                </td>
+                <td className="px-5 py-3"><FlowBadge flow={a.flow} /></td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <OutcomeBadge outcome={a.outcome} />
+                    {!isSelfEvidentError(a.outcome) && <SeverityBadge severity={a.severity} />}
+                    {a.reason && !isSelfEvidentError(a.outcome) && (
+                      <span className="text-xs text-slate-500 dark:text-neutral-400 italic">{a.reason}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
+                  {formatIST(a.timestamp)}
+                </td>
+                <td className="px-5 py-3 max-w-96">
+                  {a.error ? (
+                    <HoverCard>
+                      <HoverCardTrigger
+                        delay={200}
+                        closeDelay={100}
+                        render={
+                          <span className="block cursor-default truncate font-mono text-xs text-red-600 dark:text-red-400" />
+                        }
+                      >
+                        {a.error}
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-[32rem]">
+                        <p className="whitespace-pre-wrap break-words font-mono text-xs text-red-600 dark:text-red-400">
+                          {a.error}
+                        </p>
+                      </HoverCardContent>
+                    </HoverCard>
+                  ) : (
+                    <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   }
 
   return (
@@ -316,7 +440,7 @@ export function Anomalies() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{data!.totalAnomalies}</p>
-                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Failures detected</p>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Anomalies detected</p>
               </div>
             </div>
             <div className="rounded-xl border bg-white dark:bg-neutral-900 px-5 py-4 flex items-center gap-4">
@@ -327,7 +451,7 @@ export function Anomalies() {
                 <p className={`text-2xl font-bold tabular-nums ${parseFloat(failureRate) > 10 ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                   {failureRate}%
                 </p>
-                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Failure rate</p>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Anomaly rate</p>
               </div>
             </div>
           </div>
@@ -342,7 +466,7 @@ export function Anomalies() {
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Click columns to sort</p>
               </div>
               {breakdown.length === 0 ? (
-                <EmptyState message="No failures in this period" />
+                <EmptyState message="No anomalies in this period" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -417,7 +541,7 @@ export function Anomalies() {
               <div className="px-5 py-4 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                 <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">
-                  {includeNormal ? "All events" : "Failure events"}
+                  {includeNormal ? "All events" : "Anomaly events"}
                 </h2>
                 <span className="text-xs text-slate-400 dark:text-neutral-500 font-medium">
                   {data!.total} total
@@ -427,112 +551,37 @@ export function Anomalies() {
                   <span className="text-xs text-slate-600 dark:text-neutral-400 font-medium">Include normal events</span>
                 </label>
               </div>
-              {events.length === 0 ? (
-                <EmptyState
-                  message={includeNormal ? "No events logged in this period" : "No failures in this period"}
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
-                      <tr>
-                        {EVENT_COLUMNS.map((col) => (
-                          <th
-                            key={col.key}
-                            className="px-5 py-3 text-left select-none cursor-pointer group whitespace-nowrap"
-                            onClick={() => toggleEventSort(col.key)}
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 group-hover:text-slate-700 dark:group-hover:text-neutral-300 transition-colors">
-                                {col.label}
-                              </span>
-                              <EventSortIcon field={col.key} />
-                            </div>
-                          </th>
-                        ))}
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
-                          Detail
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
-                      {sortedEvents.map((a, i) => (
-                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
-                          <td className="px-5 py-3 whitespace-nowrap">
-                            {a.issueKey ? (
-                              <HoverCard>
-                                <HoverCardTrigger
-                                  delay={200}
-                                  closeDelay={100}
-                                  render={
-                                    <Link
-                                      to={`/tickets/${a.issueKey}`}
-                                      className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                                    />
-                                  }
-                                >
-                                  {a.issueKey}
-                                </HoverCardTrigger>
-                                 <HoverCardContent className="w-[28rem]">
-                                  <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200 break-words">
-                                    {a.title ?? a.issueKey}
-                                  </p>
-                                  <div className="mt-1.5 space-y-1 text-xs text-slate-500 dark:text-neutral-400">
-                                    {a.employeeEmail && <p className="truncate">Employee: {a.employeeEmail}</p>}
-                                    {a.managerEmail && <p className="truncate">Manager: {a.managerEmail}</p>}
-                                    {a.createdAt && <p>Created: {formatIST(a.createdAt)}</p>}
-                                    <p>Updated: {formatIST(a.timestamp)}</p>
-                                  </div>
-                                </HoverCardContent>
-                              </HoverCard>
-                            ) : (
-                              <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3"><FlowBadge flow={a.flow} /></td>
-                          <td className="px-5 py-3">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <OutcomeBadge outcome={a.outcome} />
-                              {!isSelfEvidentError(a.outcome) && <SeverityBadge severity={a.severity} />}
-                              {a.reason && !isSelfEvidentError(a.outcome) && (
-                                <span className="text-xs text-slate-500 dark:text-neutral-400 italic">{a.reason}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
-                            {formatIST(a.timestamp)}
-                          </td>
-                          <td className="px-5 py-3 max-w-96">
-                            {a.error ? (
-                              <HoverCard>
-                                <HoverCardTrigger
-                                  delay={200}
-                                  closeDelay={100}
-                                  render={
-                                    <span className="block cursor-default truncate font-mono text-xs text-red-600 dark:text-red-400" />
-                                  }
-                                >
-                                  {a.error}
-                                </HoverCardTrigger>
-                                <HoverCardContent className="w-[32rem]">
-                                  <p className="whitespace-pre-wrap break-words font-mono text-xs text-red-600 dark:text-red-400">
-                                    {a.error}
-                                  </p>
-                                </HoverCardContent>
-                              </HoverCard>
-                            ) : (
-                              <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <EventTable
+                rows={sortedEvents}
+                emptyMessage={includeNormal ? "No events logged in this period" : "No anomalies in this period"}
+              />
               {data!.total > ANOMALIES_PAGE_SIZE && (
                 <div className="border-t px-5 py-3">
                   <Pagination page={page} pageSize={ANOMALIES_PAGE_SIZE} total={data!.total} onPageChange={setPage} itemLabel="events" />
+                </div>
+              )}
+            </div>
+
+            {/* Offboarding SLA Breach -- a distinct, ongoing "past deadline"
+                state, kept separate from one-off failure events above. */}
+            <div className="rounded-xl border bg-white dark:bg-neutral-900 overflow-hidden">
+              <div className="px-5 py-4 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Offboarding SLA Breach</h2>
+                <span className="text-xs text-slate-400 dark:text-neutral-500 font-medium">
+                  {sortedSlaBreachEvents.length} total
+                </span>
+              </div>
+              <EventTable rows={slaBreachPageRows} emptyMessage="No SLA breaches in this period" />
+              {sortedSlaBreachEvents.length > SLA_BREACH_PAGE_SIZE && (
+                <div className="border-t px-5 py-3">
+                  <Pagination
+                    page={slaBreachPage}
+                    pageSize={SLA_BREACH_PAGE_SIZE}
+                    total={sortedSlaBreachEvents.length}
+                    onPageChange={setSlaBreachPage}
+                    itemLabel="breaches"
+                  />
                 </div>
               )}
             </div>

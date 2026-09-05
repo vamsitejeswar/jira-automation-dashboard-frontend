@@ -199,3 +199,44 @@ export function HrTicketTypeBadge({ type }: { type: "onboarding" | "offboarding"
     </Badge>
   );
 }
+
+// Onboarding/Offboarding parent-ticket browse mode's own date filter (see
+// Tickets.tsx's DATE_STATUS_OPTIONS) -- "Overdue" is a warning (the joining
+// date/Last Working Day has passed and the ticket is still open, the same
+// signal as an SLA breach), "Upcoming" is a neutral heads-up, not a problem.
+const DATE_STATUS_CONFIG: Record<"upcoming" | "overdue", { label: string; style: StatusKey }> = {
+  upcoming: { label: "Upcoming", style: "info" },
+  overdue: { label: "Overdue", style: "warning" },
+};
+
+export function DateStatusBadge({ status }: { status: "upcoming" | "overdue" }) {
+  const cfg = DATE_STATUS_CONFIG[status];
+  return (
+    <Badge variant="ghost" className={STATUS_STYLE[cfg.style]}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
+// The real Jira status name (WIP, On-Hold, Closed, ...) is free text this
+// app doesn't control -- workflows differ per project/ticket type, so this
+// matches on keyword rather than an exact-value map, which would silently
+// fall back to "muted" (unstyled) for every status string it hasn't seen
+// yet. Order matters: terminal states are checked first since "Cancelled"
+// etc. could otherwise also read as a "waiting" state on some wordings.
+function jiraStatusStyle(status: string): StatusKey {
+  const s = status.toLowerCase();
+  if (/cancel/.test(s)) return "muted"; // not a success -- just neutrally done
+  if (/clos|done|resolv|complet/.test(s)) return "success";
+  if (/hold|block|wait|pending/.test(s)) return "warning";
+  if (/wip|progress|open|active|review/.test(s)) return "info";
+  return "muted";
+}
+
+export function JiraStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge variant="ghost" className={STATUS_STYLE[jiraStatusStyle(status)]}>
+      {status}
+    </Badge>
+  );
+}

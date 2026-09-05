@@ -1,27 +1,35 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
+  Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Tooltip as ChartTooltip,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import { useTheme } from "@/providers/theme-provider";
+import {
   Users, UserMinus, MailCheck, XCircle, Clock, ArrowRight, Activity, AlertTriangle, Play, Loader2,
-  ArrowUpRight, Search, TrendingUp, TrendingDown, Info,
+  Search, TrendingUp, TrendingDown, Info,
 } from "lucide-react";
+
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ChartTooltip);
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { SeverityBadge, FlowBadge } from "@/components/app/badges";
+import { SeverityBadge, FlowBadge, OutcomeBadge, isSelfEvidentError } from "@/components/app/badges";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { toast } from "@/components/ui/toast";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { PresetPicker } from "@/components/app/preset-picker";
 import { getKpis, getAnomalies, getScheduledJobs, runScheduledJob, getIntegrationHealth } from "@/api";
-import type { EmployeeSearchResult, IntegrationStatus, Health } from "@/api";
-import { formatISTShort, describeCron, titleCase } from "@/lib/utils";
+import type { EmployeeSearchResult, IntegrationStatus, Health, FailureCategoryCounts } from "@/api";
+import { formatIST, formatISTShort, describeCron } from "@/lib/utils";
 import { DATE_PRESETS, getPresetDates, type DatePreset } from "@/lib/date-presets";
 import { useEmployeeSuggestions } from "@/lib/useEmployeeSuggestions";
 
@@ -36,11 +44,72 @@ function parseYMD(s: string | undefined): Date | undefined {
 // _previous_period), replacing the old hardcoded +12%/+4%/-3% arrows that
 // showed on every load regardless of real data.
 const KPI_CONFIG = [
-  { dataKey: "onboardedCount"    as const, trendKey: "onboardedCount"  as const, label: "Onboarded",         icon: Users,    accent: "#2563eb", sub: "Employees",              viewTo: "/tickets" },
-  { dataKey: "offboardedCount"   as const, trendKey: "offboardedCount" as const, label: "Offboarded",        icon: UserMinus, accent: "#7c3aed", sub: "Employees",              viewTo: "/tickets" },
+  { dataKey: "onboardedCount"    as const, trendKey: "onboardedCount"  as const, label: "Onboardings",         icon: Users,    accent: "#2563eb", sub: "Employees",              viewTo: "/tickets?type=onboarding" },
+  { dataKey: "offboardedCount"   as const, trendKey: "offboardedCount" as const, label: "Offboardings",        icon: UserMinus, accent: "#7c3aed", sub: "Employees",              viewTo: "/tickets?type=offboarding" },
   { dataKey: "pendingApprovals"  as const, trendKey: null,                       label: "Pending Approvals", icon: MailCheck, accent: "#d97706", sub: "Awaiting manager reply", viewTo: "/approvals", live: true },
-  { dataKey: "failuresCount"     as const, trendKey: "failuresCount"   as const, label: "Failures",          icon: XCircle,  accent: "#dc2626", sub: "Need attention",         viewTo: "/anomalies" },
+  { dataKey: "automationFailuresCount" as const, trendKey: "automationFailuresCount" as const, label: "Automation Failures", icon: XCircle, accent: "#dc2626", sub: "Automation actually failed", viewTo: "/anomalies" },
 ];
+
+// Metadata for the "what kind of attention" breakdown table below the KPI
+// row -- keys match app/services/anomaly_analytics.py's categorize_anomaly
+// exactly, in the order they're shown.
+const FAILURE_CATEGORY_META: {
+  key: keyof FailureCategoryCounts; label: string; dot: string; row: string; text: string; meaning: string;
+}[] = [
+  { key: "automation_failure", label: "Automation Failures",       dot: "bg-red-500",    row: "bg-red-50/70 dark:bg-red-950/20",       text: "text-red-700 dark:text-red-400",       meaning: "Automation actually failed to perform the required action" },
+  { key: "workflow_issue",     label: "Workflow Issues",           dot: "bg-orange-500", row: "bg-orange-50/70 dark:bg-orange-950/20", text: "text-orange-700 dark:text-orange-400", meaning: "Action succeeded, but the ticket/workflow transition had an issue" },
+  { key: "blocked_pending",    label: "Blocked / Pending",         dot: "bg-amber-400",  row: "bg-amber-50/70 dark:bg-amber-950/20",   text: "text-amber-700 dark:text-amber-400",   meaning: "Waiting on a manager, a field, or another dependency" },
+  { key: "needs_review",       label: "Exceptions / Needs Review", dot: "bg-blue-500",   row: "bg-blue-50/70 dark:bg-blue-950/20",     text: "text-blue-700 dark:text-blue-400",     meaning: "Ambiguous or unusual cases requiring human review" },
+];
+
+function FailureCategoryTable({ counts }: { counts: FailureCategoryCounts }) {
+  const total = FAILURE_CATEGORY_META.reduce((sum, c) => sum + counts[c.key], 0);
+  return (
+    <div className="flex h-full flex-col rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
+      <div className="px-5 py-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
+          <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
+          Attention Breakdown
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Hover a row to see why it's flagged</p>
+      </div>
+      <TooltipProvider delay={200}>
+        <div className="flex flex-1 flex-col overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">Category</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">Count</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+              {FAILURE_CATEGORY_META.map((c) => (
+                <Tooltip key={c.key}>
+                  <TooltipTrigger render={<tr className="cursor-default hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors" />}>
+                    <td className="px-5 py-5 whitespace-nowrap">
+                      <span className="flex items-center gap-2 font-medium text-slate-800 dark:text-neutral-200">
+                        <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${c.dot}`} />
+                        {c.label}
+                      </span>
+                    </td>
+                    <td className={`px-5 py-5 text-right tabular-nums text-xl font-bold ${c.text}`}>
+                      {counts[c.key]}
+                    </td>
+                  </TooltipTrigger>
+                  <TooltipContent>{c.meaning}</TooltipContent>
+                </Tooltip>
+              ))}
+            </tbody>
+          </table>
+          <div className="mt-auto flex items-center justify-between border-t bg-slate-50/70 px-5 py-5 font-semibold dark:bg-neutral-800/50">
+            <span className="text-sm text-slate-800 dark:text-neutral-200">Total flagged cases</span>
+            <span className="tabular-nums text-xl text-slate-900 dark:text-neutral-100">{total}</span>
+          </div>
+        </div>
+      </TooltipProvider>
+    </div>
+  );
+}
 
 const DISMISSED_STORAGE_KEY = "dashboard-dismissed-attention-items";
 
@@ -164,7 +233,7 @@ function KpiTile({ label, value, previous, icon: Icon, accent, live, sub, viewTo
   const up = pctChange >= 0;
   const TrendIcon = up ? TrendingUp : TrendingDown;
   // For Failures, "up" is bad (red); for everything else "up" is good (green).
-  const trendColor = label === "Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
+  const trendColor = label === "Automation Failures" ? (up ? "#dc2626" : "#16a34a") : (up ? "#16a34a" : "#dc2626");
   return (
     <div
       className="rounded-xl border border-t-4 bg-white overflow-hidden flex flex-col dark:bg-neutral-900"
@@ -270,20 +339,31 @@ function AutomationHealthCard({ successful, failed, previous }: {
           <p className="mt-1 text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">Success rate over {total} run{total === 1 ? "" : "s"}</p>
         )}
       </div>
-      <div className="hidden shrink-0 grid-cols-3 gap-2 border-l border-slate-300 pl-5 text-xs dark:border-neutral-600 sm:grid">
-        <div className="rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-500/10">
-          <p className="text-[11px] font-medium text-blue-600/80 dark:text-blue-400/80">Total runs</p>
-          <p className="text-3xl font-bold text-blue-600 tabular-nums dark:text-blue-400">{animatedTotal}</p>
+      <TooltipProvider delay={200}>
+        <div className="hidden shrink-0 grid-cols-3 gap-2 border-l border-slate-300 pl-5 text-xs dark:border-neutral-600 sm:grid">
+          <Tooltip>
+            <TooltipTrigger render={<div className="cursor-default rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-500/10" />}>
+              <p className="text-[11px] font-medium text-blue-600/80 dark:text-blue-400/80">Total runs</p>
+              <p className="text-3xl font-bold text-blue-600 tabular-nums dark:text-blue-400">{animatedTotal}</p>
+            </TooltipTrigger>
+            <TooltipContent>Distinct tickets with automation activity in this period.</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={<div className="cursor-default rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10" />}>
+              <p className="text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">Successful</p>
+              <p className="text-3xl font-bold text-emerald-600 tabular-nums dark:text-emerald-400">{animatedSuccessful}</p>
+            </TooltipTrigger>
+            <TooltipContent>Tickets whose most recent status was a real success.</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={<div className="cursor-default rounded-xl bg-red-50 px-3 py-2 dark:bg-red-500/10" />}>
+              <p className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">Failed</p>
+              <p className="text-3xl font-bold text-red-600 tabular-nums dark:text-red-400">{animatedFailed}</p>
+            </TooltipTrigger>
+            <TooltipContent>Includes tickets stuck waiting on a manager/field, not only real automation failures.</TooltipContent>
+          </Tooltip>
         </div>
-        <div className="rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
-          <p className="text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">Successful</p>
-          <p className="text-3xl font-bold text-emerald-600 tabular-nums dark:text-emerald-400">{animatedSuccessful}</p>
-        </div>
-        <div className="rounded-xl bg-red-50 px-3 py-2 dark:bg-red-500/10">
-          <p className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">Failed</p>
-          <p className="text-3xl font-bold text-red-600 tabular-nums dark:text-red-400">{animatedFailed}</p>
-        </div>
-      </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -296,6 +376,9 @@ function AutomationHealthCard({ successful, failed, previous }: {
 function ReliabilityTrendCard({ byDay }: {
   byDay: { date: string; onboarded: number; offboarded: number; failures: number }[];
 }) {
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
+
   const dailyPct = byDay.map((d) => {
     const dayTotal = d.onboarded + d.offboarded + d.failures;
     return dayTotal > 0 ? Math.round(((d.onboarded + d.offboarded) / dayTotal) * 100) : 100;
@@ -308,37 +391,25 @@ function ReliabilityTrendCard({ byDay }: {
   const worst = dailyPct.length > 0 ? Math.min(...dailyPct) : null;
   const animatedAvg = useCountUp(avg ?? 0);
 
-  const w = 100;
-  const h = 64;
-  const pad = 6;
-  const points = dailyPct
-    .map((p, i) => {
-      const x = dailyPct.length > 1 ? (i / (dailyPct.length - 1)) * w : w / 2;
-      const y = pad + (1 - p / 100) * (h - pad * 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const lineColor = dark ? "#34d399" : "#10b981";
+  const tooltipBg = dark ? "#0f172a" : "#ffffff";
+  const tooltipText = dark ? "#f1f5f9" : "#0f172a";
+  const gridColor = dark ? "hsl(217 19% 27%)" : "hsl(214 32% 91%)";
 
-  // Animates the line "drawing" itself in on mount, using the classic
-  // stroke-dasharray-equal-to-length / dashoffset-from-full-to-zero trick
-  // (getTotalLength() needs the element to already be in the DOM, hence
-  // the effect rather than computing this inline during render).
-  const polylineRef = useRef<SVGPolylineElement>(null);
-  const [lineLength, setLineLength] = useState(0);
-  const [drawn, setDrawn] = useState(false);
-  useEffect(() => {
-    if (!polylineRef.current) return;
-    const length = polylineRef.current.getTotalLength();
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setLineLength(length);
-    if (reduceMotion) {
-      setDrawn(true);
-      return;
-    }
-    setDrawn(false);
-    const id = requestAnimationFrame(() => setDrawn(true));
-    return () => cancelAnimationFrame(id);
-  }, [points]);
+  const chartData = {
+    labels: byDay.map((d) => d.date),
+    datasets: [
+      {
+        data: dailyPct,
+        borderColor: lineColor,
+        backgroundColor: lineColor,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.35,
+      },
+    ],
+  };
 
   return (
     <div className="rounded-xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-5 flex items-center gap-4">
@@ -358,19 +429,37 @@ function ReliabilityTrendCard({ byDay }: {
         </p>
       </div>
       {dailyPct.length > 0 && (
-        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-16 flex-1">
-          <polyline
-            ref={polylineRef}
-            points={points}
-            fill="none"
-            stroke="#10b981"
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-            strokeDasharray={lineLength}
-            strokeDashoffset={drawn ? 0 : lineLength}
-            style={{ transition: "stroke-dashoffset 1.2s ease-out" }}
+        <div className="h-16 flex-1">
+          <Line
+            data={chartData}
+            options={{
+              maintainAspectRatio: false,
+              animation: { duration: 600 },
+              scales: {
+                x: { display: false },
+                y: { display: false, min: 0, max: 100 },
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    title: (items) => items[0]?.label ?? "",
+                    label: (item) => `Reliability: ${item.formattedValue}%`,
+                  },
+                  displayColors: false,
+                  backgroundColor: tooltipBg,
+                  titleColor: tooltipText,
+                  bodyColor: tooltipText,
+                  borderColor: gridColor,
+                  borderWidth: 1,
+                  padding: 8,
+                  cornerRadius: 6,
+                  bodyFont: { size: 12 },
+                },
+              },
+            }}
           />
-        </svg>
+        </div>
       )}
     </div>
   );
@@ -492,10 +581,10 @@ export function Overview() {
       to: "/approvals",
     });
   }
-  if (kpis.data && kpis.data.failuresCount > 0) {
+  if (kpis.data && kpis.data.automationFailuresCount > 0) {
     attentionItems.push({
       id: "failures",
-      text: `${kpis.data.failuresCount} failure${kpis.data.failuresCount === 1 ? "" : "s"} in the selected period`,
+      text: `${kpis.data.automationFailuresCount} automation failure${kpis.data.automationFailuresCount === 1 ? "" : "s"} in the selected period`,
       to: "/anomalies",
     });
   }
@@ -710,13 +799,13 @@ export function Overview() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <AutomationHealthCard
-              successful={kpis.data!.onboardedCount + kpis.data!.offboardedCount}
-              failed={kpis.data!.failuresCount}
+              successful={kpis.data!.automationHealth.successful}
+              failed={kpis.data!.automationHealth.failed}
               previous={
                 kpis.data!.previousPeriod
                   ? {
-                      successful: kpis.data!.previousPeriod.onboardedCount + kpis.data!.previousPeriod.offboardedCount,
-                      failed: kpis.data!.previousPeriod.failuresCount,
+                      successful: kpis.data!.previousPeriod.automationHealth.successful,
+                      failed: kpis.data!.previousPeriod.automationHealth.failed,
                     }
                   : undefined
               }
@@ -742,10 +831,13 @@ export function Overview() {
 
           <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
             <div className="px-5 py-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
-                <Activity className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
-                Activity trend
-              </h2>
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
+                  <Activity className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
+                  Activity trend
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Onboarding and offboarding volume over the selected range</p>
+              </div>
               <span className="text-xs text-slate-400 dark:text-neutral-500">{dates.from} → {dates.to}</span>
             </div>
             <div className="p-5">
@@ -753,62 +845,17 @@ export function Overview() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Anomalies */}
-            <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
-              <div className="flex items-center justify-between px-5 py-4">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
-                  <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
-                  Recent anomalies
-                </h2>
-                <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  View all <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-              {anomalies.isLoading ? (
-                <div className="space-y-3 px-5 py-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="h-5 w-14 rounded-full" />
-                      <Skeleton className="h-4 w-20 rounded-full" />
-                      <Skeleton className="flex-1 h-3" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  ))}
-                </div>
-              ) : anomalies.isError ? (
-                <div className="px-5 py-3"><ErrorState error={anomalies.error as Error} onRetry={anomalies.refetch} /></div>
-              ) : anomalies.data!.anomalies.length === 0 ? (
-                <EmptyState message="No anomalies in this period" className="py-8" />
-              ) : (
-                <ul className="divide-y divide-slate-100 dark:divide-neutral-800">
-                  {anomalies.data!.anomalies.slice(0, 8).map((a, i) => (
-                    <li key={i} className="flex items-center gap-2.5 px-5 py-3 hover:bg-slate-50 transition-colors dark:hover:bg-neutral-800/50">
-                      <SeverityBadge severity={a.severity} />
-                      <FlowBadge flow={a.flow} />
-                      <span className="flex-1 truncate text-xs text-slate-500 dark:text-neutral-400">{titleCase(a.outcome)}</span>
-                      {a.issueKey && (
-                        <Link
-                          to={`/tickets/${a.issueKey}`}
-                          className="flex items-center gap-0.5 shrink-0 font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          {a.issueKey}
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
-                      <span className="shrink-0 text-xs text-slate-600 tabular-nums dark:text-neutral-400">{formatISTShort(a.timestamp)}</span>
-                      
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2 items-stretch">
+            <FailureCategoryTable counts={kpis.data!.failureCategoryCounts} />
 
             {/* Jobs */}
             <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
-              <div className="px-5 py-4 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-neutral-300">Upcoming scheduled runs</h2>
+              <div className="px-5 py-4">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
+                  <Clock className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
+                  Upcoming scheduled runs
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">Cloud Scheduler jobs and when they run next</p>
               </div>
               {jobs.isLoading ? (
                 <div className="space-y-3.5 px-5 py-3.5">
@@ -867,7 +914,125 @@ export function Overview() {
                 </ul>
               )}
             </div>
-            
+
+          </div>
+
+          {/* Anomalies -- full width */}
+          <div className="rounded-xl border bg-white overflow-hidden dark:bg-neutral-900">
+            <div className="flex items-center justify-between px-5 py-4">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-neutral-300">
+                <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-neutral-500" />
+                Recent anomalies
+              </h2>
+              <Link to="/anomalies" className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {anomalies.isLoading ? (
+              <div className="space-y-3 px-5 py-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                    <Skeleton className="h-4 w-20 rounded-full" />
+                    <Skeleton className="flex-1 h-3" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : anomalies.isError ? (
+              <div className="px-5 py-3"><ErrorState error={anomalies.error as Error} onRetry={anomalies.refetch} /></div>
+            ) : anomalies.data!.anomalies.length === 0 ? (
+              <EmptyState message="No anomalies in this period" className="py-8" />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-slate-50/70 dark:bg-neutral-800/50">
+                    <tr>
+                      {["Issue", "Flow", "Status", "Time"].map((label) => (
+                        <th key={label} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400 whitespace-nowrap">
+                          {label}
+                        </th>
+                      ))}
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+                        Detail
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+                    {anomalies.data!.anomalies.slice(0, 10).map((a, i) => (
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          {a.issueKey ? (
+                            <HoverCard>
+                              <HoverCardTrigger
+                                delay={200}
+                                closeDelay={100}
+                                render={
+                                  <Link
+                                    to={`/tickets/${a.issueKey}`}
+                                    className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                                  />
+                                }
+                              >
+                                {a.issueKey}
+                              </HoverCardTrigger>
+                              <HoverCardContent className="w-[28rem]">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-neutral-200 break-words">
+                                  {a.title ?? a.issueKey}
+                                </p>
+                                <div className="mt-1.5 space-y-1 text-xs text-slate-500 dark:text-neutral-400">
+                                  {a.employeeEmail && <p className="truncate">Employee: {a.employeeEmail}</p>}
+                                  {a.managerEmail && <p className="truncate">Manager: {a.managerEmail}</p>}
+                                  {a.createdAt && <p>Created: {formatIST(a.createdAt)}</p>}
+                                  <p>Updated: {formatIST(a.timestamp)}</p>
+                                </div>
+                              </HoverCardContent>
+                            </HoverCard>
+                          ) : (
+                            <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3"><FlowBadge flow={a.flow} /></td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <OutcomeBadge outcome={a.outcome} />
+                            {!isSelfEvidentError(a.outcome) && <SeverityBadge severity={a.severity} />}
+                            {a.reason && !isSelfEvidentError(a.outcome) && (
+                              <span className="text-xs text-slate-500 dark:text-neutral-400 italic">{a.reason}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 tabular-nums text-xs text-slate-400 dark:text-neutral-500 whitespace-nowrap">
+                          {formatIST(a.timestamp)}
+                        </td>
+                        <td className="px-5 py-3 max-w-96">
+                          {a.error ? (
+                            <HoverCard>
+                              <HoverCardTrigger
+                                delay={200}
+                                closeDelay={100}
+                                render={
+                                  <span className="block cursor-default truncate font-mono text-xs text-red-600 dark:text-red-400" />
+                                }
+                              >
+                                {a.error}
+                              </HoverCardTrigger>
+                              <HoverCardContent className="w-[32rem]">
+                                <p className="whitespace-pre-wrap break-words font-mono text-xs text-red-600 dark:text-red-400">
+                                  {a.error}
+                                </p>
+                              </HoverCardContent>
+                            </HoverCard>
+                          ) : (
+                            <span className="text-xs text-slate-400 dark:text-neutral-500">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
              {health.data && (
             <TooltipProvider>

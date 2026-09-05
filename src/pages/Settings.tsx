@@ -138,6 +138,7 @@ const CONFIG_ICONS: Record<ConfigName, React.ElementType> = {
   isecure_location:                 DoorClosed,
   isecure_default_access_group_ids: DoorClosed,
   hr_allowed_emails:                UserCog,
+  isecure_card_sheet_recipient_email: DoorClosed,
 };
 
 const CONFIG_ACCENT: Record<ConfigName, string> = {
@@ -149,6 +150,7 @@ const CONFIG_ACCENT: Record<ConfigName, string> = {
   isecure_location:                 "#059669",
   isecure_default_access_group_ids: "#059669",
   hr_allowed_emails:                "#7c3aed",
+  isecure_card_sheet_recipient_email: "#059669",
 };
 
 function ToggleRow({

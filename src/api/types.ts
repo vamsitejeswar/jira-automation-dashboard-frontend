@@ -15,6 +15,12 @@ export const FlowSchema = z.enum([
   // as everything else, so anomalies/KPI breakdowns need to be able to
   // parse them too.
   "approval_reminder",
+  // Same idea as approval_reminder, for send_missing_email_reminders' own
+  // daily reminder job (reminder_sent/reminders_exhausted/already_closed/
+  // automation_disabled) -- confirmed 2026-09-05 this was missing outright
+  // (not just undocumented), which hard-crashed the whole dashboard the
+  // moment a real missing_email_reminder audit event existed.
+  "missing_email_reminder",
   // "Admin Support" subtask -> iSecure/Aero physical access-control (door
   // cards) onboarding/offboarding. Fires on both onboarding and offboarding
   // parent tickets under the same flow name.
@@ -95,7 +101,7 @@ export const CommentSchema = z.object({
 // Timeline, and inside the Employee Search accordion. Most tickets have
 // exactly 3 stages; an offboarding "Software Access Revoke" ticket has one
 // middle stage per application (application is only set on those rows).
-export const StageStatusSchema = z.enum(["done", "in_progress", "pending", "skipped", "failed"]);
+export const StageStatusSchema = z.enum(["done", "in_progress", "pending", "waiting", "skipped", "failed"]);
 export type StageStatus = z.infer<typeof StageStatusSchema>;
 
 export const StageSchema = z.object({
@@ -135,6 +141,29 @@ export const TicketsResponseSchema = z.object({
 });
 export type TicketsResponse = z.infer<typeof TicketsResponseSchema>;
 
+// One row per real Employee Onboarding/Offboarding PARENT ticket (via JQL,
+// not the audit-event-derived subtask rows TicketSummary represents) --
+// powers the Tickets page's Onboarding/Offboarding browse mode. Clicking a
+// row deep-links into Employee Search for the full multi-subtask breakdown
+// rather than this type carrying that itself.
+export const ParentTicketSchema = z.object({
+  issueKey: z.string(),
+  title: z.string().nullable(),
+  employeeEmail: z.string().nullable(),
+  status: z.string().nullable(),
+  createdAt: z.string().nullable(),
+  relevantDate: z.string().nullable(),
+  dateStatus: z.enum(["upcoming", "overdue"]).nullable(),
+});
+export type ParentTicket = z.infer<typeof ParentTicketSchema>;
+
+export const ParentTicketsResponseSchema = z.object({
+  total: z.number(),
+  page: z.number(),
+  results: z.array(ParentTicketSchema),
+});
+export type ParentTicketsResponse = z.infer<typeof ParentTicketsResponseSchema>;
+
 // ── KPIs ───────────────────────────────────────────────────────────────────────
 export const KpisByDaySchema = z.object({
   date: z.string(),
@@ -143,11 +172,40 @@ export const KpisByDaySchema = z.object({
   failures: z.number(),
 });
 
+// Ticket-level success/failure counts (one row per distinct issueKey, same
+// classification the Tickets/Failures page uses) -- powers the Overview
+// "Automation Health" card. Deliberately separate from onboardedCount/
+// offboardedCount (real ticket VOLUME) and failuresCount (raw anomaly EVENT
+// count, not deduplicated per ticket) -- those two are different units and
+// summing them produced a meaningless "total runs" figure.
+export const AutomationHealthSchema = z.object({
+  total: z.number(),
+  successful: z.number(),
+  failed: z.number(),
+});
+
+// One flagged event bucketed by what KIND of attention it needs -- "349
+// failures" used to lump a real automation bug in with a ticket just
+// waiting on a manager to reply, which read as "automation broke 349
+// times" to an admin glancing at the number (confirmed live 2026-09-01).
+export const FailureCategoryCountsSchema = z.object({
+  automation_failure: z.number(),
+  workflow_issue: z.number(),
+  blocked_pending: z.number(),
+  needs_review: z.number(),
+});
+export type FailureCategoryCounts = z.infer<typeof FailureCategoryCountsSchema>;
+
 export const KpisSchema = z.object({
   onboardedCount: z.number(),
   offboardedCount: z.number(),
   akamaiClones: z.number(),
   failuresCount: z.number(),
+  // The real, narrow "automation actually failed" count -- what the
+  // top-line KPI card shows now, distinct from failuresCount above.
+  automationFailuresCount: z.number(),
+  failureCategoryCounts: FailureCategoryCountsSchema,
+  automationHealth: AutomationHealthSchema,
   // A live snapshot (Mail Approval tickets currently awaiting a manager
   // reply), not scoped to the from/to range like the rest of this response.
   pendingApprovals: z.number(),
@@ -159,12 +217,14 @@ export const KpisSchema = z.object({
     onboardedCount: z.number(),
     offboardedCount: z.number(),
     failuresCount: z.number(),
+    automationFailuresCount: z.number(),
+    automationHealth: AutomationHealthSchema,
   }).optional(),
 });
 export type Kpis = z.infer<typeof KpisSchema>;
 
 // ── Mail Approvals ─────────────────────────────────────────────────────────────
-export const ApprovalStatusSchema = z.enum(["pending", "approved", "ignored", "no_response", "failed", "untracked"]);
+export const ApprovalStatusSchema = z.enum(["pending", "approved", "ignored", "no_response", "failed", "untracked", "deferred"]);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
 
 export const ApprovalSchema = z.object({
@@ -237,6 +297,7 @@ export const ConfigNameSchema = z.enum([
   "isecure_location",
   "isecure_default_access_group_ids",
   "hr_allowed_emails",
+  "isecure_card_sheet_recipient_email",
 ]);
 export type ConfigName = z.infer<typeof ConfigNameSchema>;
 

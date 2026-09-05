@@ -32,7 +32,13 @@ export function TrendChart({ data }: { data: Kpis["byDay"] }) {
       <ComposedChart data={formatted} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis dataKey="date" tick={{ fontSize: 11, fill: tickColor }} />
-        <YAxis tick={{ fontSize: 11, fill: tickColor }} allowDecimals={false} />
+        {/* sqrt, not linear -- a genuine anomaly spike (e.g. 87 failures in
+            a day) must never be clipped off the chart, but a hard-linear
+            0-100 axis flattens every quiet day's 1-5 bars into near-nothing.
+            A sqrt scale keeps the spike fully visible (never hidden) while
+            giving small values real, comparable height -- the axis ticks
+            still show true counts, just non-uniformly spaced. */}
+        <YAxis tick={{ fontSize: 11, fill: tickColor }} allowDecimals={false} scale="sqrt" domain={[0, "auto"]} />
         <Tooltip
           contentStyle={{
             fontSize: 12,

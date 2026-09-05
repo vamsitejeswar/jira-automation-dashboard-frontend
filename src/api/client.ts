@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   TicketsResponseSchema,
   TicketDetailSchema,
+  ParentTicketsResponseSchema,
   KpisSchema,
   TogglesResponseSchema,
   ConfigResponseSchema,
@@ -22,6 +23,7 @@ import {
   HrTicketUpdateResponseSchema,
   type TicketsResponse,
   type TicketDetail,
+  type ParentTicketsResponse,
   type Kpis,
   type Toggle,
   type ConfigValue,
@@ -58,6 +60,47 @@ function friendlyErrorMessage(status: number): string {
   return "We couldn't complete that request. Please try again.";
 }
 
+function pathKey(path: (string | number)[]): string {
+  return JSON.stringify(path);
+}
+
+function getAt(obj: unknown, path: (string | number)[]): unknown {
+  return path.reduce<unknown>((acc, key) => {
+    if (acc == null || typeof acc !== "object") return undefined;
+    return (acc as Record<string | number, unknown>)[key];
+  }, obj);
+}
+
+// One malformed item deep inside an otherwise-valid list (e.g. an
+// unrecognized "flow" value from a leftover/legacy event, or a brand new
+// value this frontend hasn't caught up on yet) must never take down the
+// whole response. Finds the array item each validation issue belongs to and
+// drops just that item from a cloned copy, so the rest of the list still
+// renders. Returns null if no issue traces back to a removable array item
+// (a real, unrelated validation problem) -- the caller then surfaces the
+// original error as-is rather than guessing further.
+function dropInvalidArrayItems(json: unknown, issues: z.ZodIssue[]): unknown | null {
+  const toRemove = new Map<string, Set<number>>();
+  for (const issue of issues) {
+    const idx = issue.path.findIndex((segment) => typeof segment === "number");
+    if (idx === -1) continue;
+    const key = pathKey(issue.path.slice(0, idx));
+    const itemIndex = issue.path[idx] as number;
+    if (!toRemove.has(key)) toRemove.set(key, new Set());
+    toRemove.get(key)!.add(itemIndex);
+  }
+  if (toRemove.size === 0) return null;
+
+  const cloned = JSON.parse(JSON.stringify(json));
+  for (const [key, indices] of toRemove) {
+    const containerPath = JSON.parse(key) as (string | number)[];
+    const arr = getAt(cloned, containerPath);
+    if (!Array.isArray(arr)) continue;
+    [...indices].sort((a, b) => b - a).forEach((i) => arr.splice(i, 1));
+  }
+  return cloned;
+}
+
 async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const res = await fetch(url, {
@@ -76,7 +119,19 @@ async function fetchJSON<T>(schema: z.ZodType<T>, path: string, init?: RequestIn
     throw new Error(friendlyErrorMessage(res.status));
   }
   const json = await res.json();
-  return schema.parse(json);
+  const result = schema.safeParse(json);
+  if (result.success) return result.data;
+
+  const cleaned = dropInvalidArrayItems(json, result.error.issues);
+  if (cleaned !== null) {
+    const retry = schema.safeParse(cleaned);
+    if (retry.success) {
+      console.warn(`Dropped invalid item(s) from ${path} response`, result.error.issues);
+      return retry.data;
+    }
+  }
+  console.error(`API response validation failed: ${path}`, result.error);
+  throw result.error;
 }
 
 export interface TicketFilters {
@@ -105,6 +160,30 @@ export function getTickets(filters: TicketFilters = {}): Promise<TicketsResponse
 
 export function getTicketDetail(issueKey: string): Promise<TicketDetail> {
   return fetchJSON(TicketDetailSchema, `/api/admin/tickets/${encodeURIComponent(issueKey)}`);
+}
+
+export interface ParentTicketFilters {
+  type: "onboarding" | "offboarding";
+  project?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  dateStatus?: "upcoming" | "overdue";
+  page?: number;
+  pageSize?: number;
+}
+
+export function getParentTickets(filters: ParentTicketFilters): Promise<ParentTicketsResponse> {
+  const params = new URLSearchParams();
+  params.set("type", filters.type);
+  if (filters.project) params.set("project", filters.project);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.dateStatus) params.set("dateStatus", filters.dateStatus);
+  params.set("page", String(filters.page ?? 1));
+  params.set("page_size", String(filters.pageSize ?? 25));
+  return fetchJSON(ParentTicketsResponseSchema, `/api/admin/parent-tickets?${params}`);
 }
 
 export interface KpiFilters { from?: string; to?: string }

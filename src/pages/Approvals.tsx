@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal, RotateCw, LifeBuoy,
+  CheckCircle2, Ban, Clock, XCircle, AlertOctagon, HelpCircle, Search, ChevronUp, ChevronDown, MoreHorizontal, RotateCw, LifeBuoy, CalendarClock,
 } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -78,6 +78,10 @@ const STATUS_CONFIG: Record<ApprovalStatus, {
     label: "Untracked", icon: HelpCircle, bg: "#f8fafc", color: "#64748b", darkBg: "#1e293b", darkColor: "#94a3b8", dot: "#94a3b8",
     description: "This email was sent before reminder tracking was introduced. It will not be reminded or actioned here. The manager's original link still works.",
   },
+  deferred: {
+    label: "Deferred", icon: CalendarClock, bg: "#eff6ff", color: "#1d4ed8", darkBg: "#172554", darkColor: "#93c5fd", dot: "#2563eb",
+    description: "Waiting for the employee's joining date or last working day. No email has been sent yet.",
+  },
 };
 
 const STATUS_TABS: { key: ApprovalStatus | "all"; label: string }[] = [
@@ -88,6 +92,7 @@ const STATUS_TABS: { key: ApprovalStatus | "all"; label: string }[] = [
   { key: "no_response", label: "No Response" },
   { key: "failed", label: "Failed" },
   { key: "untracked", label: "Untracked" },
+  { key: "deferred", label: "Deferred" },
 ];
 
 function StatusBadge({ status }: { status: ApprovalStatus }) {

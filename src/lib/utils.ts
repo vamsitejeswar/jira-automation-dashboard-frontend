@@ -12,8 +12,10 @@ export function cn(...inputs: ClassValue[]) {
 // title-casing it word-by-word would otherwise read "Ad Disable Failed".
 // "hr" is likewise always the HR-dashboard abbreviation (waiting_for_hr_update).
 // "sla" is the offboarding SLA-breach scan's outcome (sla_breach) -- without
-// this it read "Sla Breach" instead of "SLA Breach".
-const ACRONYMS = new Set(["ad", "hr", "sla"]);
+// this it read "Sla Breach" instead of "SLA Breach". "lwd"/"doj" are Last
+// Working Day / Date of Joining (deferred_to_lwd, deferred_to_doj) -- read
+// "Deferred To Lwd"/"Deferred To Doj" without this.
+const ACRONYMS = new Set(["ad", "hr", "sla", "lwd", "doj"]);
 
 // Every raw snake_case value from the backend (outcomes, toggle names, ...)
 // goes through this before it's shown as a chip/label anywhere in the app,

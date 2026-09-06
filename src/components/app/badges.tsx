@@ -24,6 +24,9 @@ const OUTCOME_MAP: Record<string, StatusKey> = {
   transfer_started: "success",
   suspended: "success",
   accepted: "success",
+  // The manager's (or admin's) real "Not Required" decision -- no transfer
+  // needed, a deliberate legitimate outcome, not a failure.
+  not_required: "success",
   transfer_email_sent: "success",
   deferred_to_lwd: "warning",
   deferred_to_doj: "warning",

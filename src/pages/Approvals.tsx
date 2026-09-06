@@ -136,7 +136,7 @@ type ActionKind = "approve" | "reject";
 type PendingAction = { approval: Approval; kind: ActionKind };
 
 function actionMenuLabel(flow: string, kind: ActionKind): string {
-  if (flow === "drive_transfer") return kind === "approve" ? "Accept (transfer to manager)" : "Send to common address";
+  if (flow === "drive_transfer") return kind === "approve" ? "Accept (transfer to manager)" : "Not required";
   return kind === "approve" ? "Clone access from…" : "No action required";
 }
 
@@ -154,11 +154,11 @@ function actionDialogCopy(approval: Approval, kind: ActionKind): { title: string
           ),
         }
       : {
-          title: "Send to Common Address",
+          title: "Mark Not Required",
           description: (
             <>
-              Transfers <strong>{who}</strong>'s Drive files to the common fallback address instead of the manager,
-              immediately.
+              Marks this Drive Transfer as not required for <strong>{who}</strong> -- no files are moved anywhere,
+              same as the manager's own "Not Required" choice.
             </>
           ),
         };

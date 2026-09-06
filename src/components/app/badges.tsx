@@ -132,6 +132,11 @@ const FLOW_CONFIG: Record<string, { label: string; style: StatusKey }> = {
   // success/failure signal.
   ad_m365_disable: { label: "AD / M365 Disable", style: "muted" },
   approval_reminder: { label: "Approval Reminder", style: "muted" },
+  // send_missing_email_reminders' own daily nudge job (see
+  // app/routers/scheduled_tasks.py) -- distinct amber, same "needs
+  // attention from HR" feel as gws_mailbox's own "Waiting For HR Update"
+  // status, but its own color since it's a different flow than Mailbox.
+  missing_email_reminder: { label: "Missing Email Reminder", style: "warning" },
   isecure_access: { label: "iSecure Access", style: "purple" },
   // Written once per incoming webhook while the master Automation toggle is
   // off -- not a real flow, just a "nothing ran" marker.

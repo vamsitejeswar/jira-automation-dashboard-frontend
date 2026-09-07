@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, MailOpen, ShieldCheck, HardDrive, Key, Lock, UserX, Clock, Database, ToggleLeft,
+  ArrowLeft, MailOpen, ShieldCheck, HardDrive, Key, Lock, UserX, Clock, Database, ToggleLeft, IdCard,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -51,6 +51,10 @@ const AUTOMATION_META: Record<string, { label: string; icon: React.ElementType; 
   toggle_change: {
     label: "Toggle Change", icon: ToggleLeft, color: "#64748b",
     blurb: "Records when an admin turns one of the automation toggles in Settings on or off.",
+  },
+  isecure_access: {
+    label: "iSecure Access", icon: IdCard, color: "#9333ea",
+    blurb: "Grants a new hire's physical door-access card on onboarding, and revokes it on offboarding, via the iSecure/Aero system.",
   },
 };
 

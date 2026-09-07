@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, Lock, UserX,
+  ArrowLeft, AlertTriangle, ExternalLink, MailOpen, ShieldCheck, HardDrive, Key, Database, ToggleLeft, Lock, UserX, IdCard,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -22,6 +22,7 @@ const FLOW_META: Record<string, { icon: React.ElementType; color: string }> = {
   toggle_change:         { icon: ToggleLeft,  color: "#64748b" },
   ad_m365_disable:       { icon: UserX,       color: "#b91c1c" },
   software_revoke:       { icon: ShieldCheck, color: "#0891b2" },
+  isecure_access:        { icon: IdCard,      color: "#9333ea" },
 };
 
 const SEVERITY_ROW: Record<string, string> = {

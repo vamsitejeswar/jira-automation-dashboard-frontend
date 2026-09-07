@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Lock,
   ToggleLeft,
+  IdCard,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ const FLOW_META: Record<string, { label: string; icon: React.ElementType; color:
   toggle_change:         { label: "Toggle Change",             icon: ToggleLeft, color: "#64748b" },
   manual_task:           { label: "Manual Task",               icon: ClipboardList, color: "#64748b" },
   software_revoke:       { label: "Software Access Revoke",   icon: ShieldCheck, color: "#0891b2" },
+  isecure_access:        { label: "iSecure Access",           icon: IdCard,      color: "#9333ea" },
 };
 
 const STATUS_CONFIG = {

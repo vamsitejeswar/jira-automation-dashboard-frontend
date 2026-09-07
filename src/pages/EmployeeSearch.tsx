@@ -517,7 +517,13 @@ export function EmployeeSearch() {
                   {data.resolvedEmails.length === 1 ? data.resolvedEmails[0] : data.query}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-neutral-400">
-                  {data.resolvedEmails.length === 0
+                  {/* records can be non-empty even with no resolved email --
+                      e.g. a real ticket whose Employee Email field is still
+                      blank, matched by issue_key instead (confirmed live
+                      2026-09-07, MADHULIKA MODI/VSD-100586) -- records.length
+                      is the real signal for "found something," not
+                      resolvedEmails alone. */}
+                  {data.records.length === 0 && data.resolvedEmails.length === 0
                     ? `No employee matched "${data.query}"`
                     : data.records.length === 0
                     ? "No automation records found"
